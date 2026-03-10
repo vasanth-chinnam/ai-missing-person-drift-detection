@@ -2,8 +2,6 @@ streamlit
 pandas
 numpy
 scikit-learn
-tensorflow
+matplotlib
 geopy
-folium
-streamlit-folium
 joblib
