@@ -52,8 +52,7 @@ for i in range(len(df)):
         columns=["latitude","longitude"]
     )
 
-    prediction = model.predict(
-    scaler.transform([[row["latitude"], row["longitude"]]]))
+    prediction = model.predict([[row["latitude"], row["longitude"]]])
 
     # geofence check
     outside, distance = check_geofence(
