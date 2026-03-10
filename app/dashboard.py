@@ -48,8 +48,8 @@ for i in range(len(df)):
 
     # anomaly model
     features = pd.DataFrame(
-        [[row["speed"],row["heart_rate"]]],
-        columns=["speed","heart_rate"]
+        [[row["latitude"],row["longitude"]]],
+        columns=["latitude","longitude"]
     )
 
     prediction = model.predict(
@@ -64,8 +64,8 @@ for i in range(len(df)):
 
     # risk score
     risk = calculate_risk(
-        row["speed"],
-        row["heart_rate"],
+        row["latitude"],
+        row["longitude"],
         outside
     )
     risk_placeholder.write(f"Risk Score: {risk}")
