@@ -67,10 +67,12 @@ for i in range(len(df)):
         row["heart_rate"],
         outside
     )
+    risk_placeholder.write(f"Risk Score: {risk}")
 
-    if prediction == -1 or outside or route_deviation:
+    if prediction == -1 or outside or route_deviation or risk > 0.5:
         alert_placeholder.error("⚠ WANDERING RISK DETECTED")
         location = f"{row['latitude']},{row['longitude']}"
+        
         #send_alert(location, risk)
 
     else:
