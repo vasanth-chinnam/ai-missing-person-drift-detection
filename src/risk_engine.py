@@ -1,14 +1,14 @@
-def calculate_risk(speed, heart_rate, outside_geofence):
+def calculate_risk(prediction, outside, route_deviation):
 
     risk = 0
 
-    if speed > 6:
-        risk += 30
-
-    if heart_rate > 100:
-        risk += 30
-
-    if outside_geofence:
+    if prediction == -1:
         risk += 40
+
+    if outside:
+        risk += 40
+
+    if route_deviation:
+        risk += 20
 
     return risk

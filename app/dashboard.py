@@ -7,7 +7,6 @@ import streamlit as st
 import pandas as pd
 import joblib
 import time
-from geopy.distance import geodesic
 from src.geofence import check_geofence
 from src.risk_engine import calculate_risk
 from src.trajectory_predictor import detect_route_deviation
@@ -21,7 +20,7 @@ st.title("AI Missing Person Early Drift Detection System")
 df = pd.read_csv("data/gps_data.csv")
 
 model = joblib.load("models/anomaly_model.pkl")
-heatmap_data = df[["latitude","longitude"]].values.tolist()
+heatmap_data = df[["latitude", "longitude"]].values.tolist()
 
 map_center = [df["latitude"].mean(), df["longitude"].mean()]
 
@@ -42,39 +41,44 @@ for i in range(len(df)):
 
     row = df.iloc[i]
 
-    live_data = df.iloc[:i+1]
+    live_data = df.iloc[:i + 1]
 
     map_placeholder.map(
-    pd.DataFrame({
-        "lat":[row["latitude"]],
-        "lon":[row["longitude"]]
-    }))
+        pd.DataFrame({
+            "lat": [row["latitude"]],
+            "lon": [row["longitude"]]
+        })
+    )
 
-    features = [[row["latitude"], row["longitude"]]]
+    # Use speed & heart_rate for anomaly detection (matches training features)
+    features = pd.DataFrame(
+        [[row["speed"], row["heart_rate"]]],
+        columns=["speed", "heart_rate"]
+    )
 
-    prediction = model.predict(features)
+    prediction = int(model.predict(features)[0])
 
     outside, distance = check_geofence(row["latitude"], row["longitude"])
 
     route_deviation = detect_route_deviation(i)
 
-    home_lat = 12.9716
-    home_lon = 77.5946
-
-    distance = abs(row["latitude"] - home_lat) + abs(row["longitude"] - home_lon)
-
-    risk = int(min(distance * 10000, 100))
+    risk = calculate_risk(prediction, outside, route_deviation)
     risk_placeholder.write(f"Risk Score: {risk}/100")
-
-    
 
     if risk > 60:
         alert_placeholder.error("⚠ WANDERING RISK DETECTED")
+        try:
+            send_alert(
+                f"{row['latitude']}, {row['longitude']}",
+                risk
+            )
+        except Exception as e:
+            st.warning(f"Email alert failed: {e}")
 
     elif risk > 30:
         alert_placeholder.warning("⚠ Suspicious Movement")
 
     else:
-        alert_placeholder.success("SAFE")
+        alert_placeholder.success("✅ SAFE")
 
     time.sleep(1)

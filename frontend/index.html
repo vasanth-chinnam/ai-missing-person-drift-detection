@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Missing Person — Drift Detection System</title>
+  <meta name="description" content="AI-powered early drift detection system for tracking and protecting missing persons using GPS, anomaly detection, and geofencing." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet Heat -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ─── Sidebar ────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+          <path d="M2 12h20"/>
+        </svg>
+      </div>
+      <span class="brand-text">DriftGuard<span class="brand-ai">AI</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard" id="nav-dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="persons" id="nav-persons">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Persons</span>
+      </a>
+      <a href="#" class="nav-item" data-page="alerts" id="nav-alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span>Alerts</span>
+        <span class="nav-badge" id="alert-badge">0</span>
+      </a>
+      <a href="#" class="nav-item" data-page="analytics" id="nav-analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+        <span>Analytics</span>
+      </a>
+      <a href="#" class="nav-item" data-page="settings" id="nav-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="system-status">
+        <span class="status-dot pulse"></span>
+        <span>System Active</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ─── Main Content ───────────────────────────────────── -->
+  <main class="main-content" id="main-content">
+
+    <!-- ── DASHBOARD PAGE ── -->
+    <section class="page active" id="page-dashboard">
+      <header class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="page-subtitle">Real-time drift detection overview</p>
+        </div>
+        <div class="header-actions">
+          <div class="live-indicator">
+            <span class="live-dot pulse"></span>
+            <span>LIVE</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card" id="stat-total">
+          <div class="stat-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="stat-info"><span class="stat-value" id="val-total">—</span><span class="stat-label">GPS Points</span></div>
+        </div>
+        <div class="stat-card" id="stat-risk">
+          <div class="stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <div class="stat-info"><span class="stat-value" id="val-risk">—</span><span class="stat-label">High Risk</span></div>
+        </div>
+        <div class="stat-card" id="stat-drift">
+          <div class="stat-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+          <div class="stat-info"><span class="stat-value" id="val-drift">—</span><span class="stat-label">Drift Events</span></div>
+        </div>
+        <div class="stat-card" id="stat-persons">
+          <div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="stat-info"><span class="stat-value" id="val-persons">—</span><span class="stat-label">Active Persons</span></div>
+        </div>
+      </div>
+
+      <!-- Map + Risk Gauge Row -->
+      <div class="dashboard-grid">
+        <div class="card map-card">
+          <div class="card-header">
+            <h2>Live Tracking Map</h2>
+            <div class="card-actions">
+              <button class="btn-icon" id="btn-toggle-heat" title="Toggle heatmap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c-5.33 4.67-8 8.33-8 11a8 8 0 0 0 16 0c0-2.67-2.67-6.33-8-11z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div id="map" class="map-container"></div>
+        </div>
+
+        <div class="side-panel">
+          <!-- Risk Gauge -->
+          <div class="card gauge-card">
+            <div class="card-header"><h2>Risk Level</h2></div>
+            <div class="gauge-wrapper">
+              <svg class="gauge" viewBox="0 0 200 120">
+                <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="16" stroke-linecap="round"/>
+                <path id="gauge-arc" d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="url(#gauge-gradient)" stroke-width="16" stroke-linecap="round" stroke-dasharray="0 251.3"/>
+                <defs>
+                  <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#10b981"/>
+                    <stop offset="50%" stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#ef4444"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="gauge-value" id="gauge-value">0</div>
+              <div class="gauge-label" id="gauge-label">SAFE</div>
+            </div>
+          </div>
+
+          <!-- Recent Alerts -->
+          <div class="card alerts-card">
+            <div class="card-header"><h2>Recent Alerts</h2></div>
+            <div class="alert-feed" id="alert-feed">
+              <div class="empty-state small">No alerts yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PERSONS PAGE ── -->
+    <section class="page" id="page-persons">
+      <header class="page-header">
+        <div>
+          <h1>Tracked Persons</h1>
+          <p class="page-subtitle">Manage monitored individuals</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" id="btn-add-person">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Person
+          </button>
+        </div>
+      </header>
+      <div class="persons-grid" id="persons-grid"></div>
+
+      <!-- Add Person Modal -->
+      <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal-add-person">
+          <div class="modal-header">
+            <h2>Register New Person</h2>
+            <button class="btn-icon modal-close" id="modal-close">&times;</button>
+          </div>
+          <form id="form-add-person">
+            <div class="form-group">
+              <label for="inp-name">Full Name</label>
+              <input type="text" id="inp-name" required placeholder="e.g. Ramesh Verma" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inp-age">Age</label>
+                <input type="number" id="inp-age" required placeholder="72" min="1" max="120" />
+              </div>
+              <div class="form-group">
+                <label for="inp-condition">Condition</label>
+                <input type="text" id="inp-condition" placeholder="e.g. Alzheimer's" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Register Person</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ALERTS PAGE ── -->
+    <section class="page" id="page-alerts">
+      <header class="page-header">
+        <div>
+          <h1>Alert History</h1>
+          <p class="page-subtitle">All detected anomalies and warnings</p>
+        </div>
+        <div class="header-actions">
+          <div class="filter-group">
+            <button class="filter-btn active" data-filter="all" id="filter-all">All</button>
+            <button class="filter-btn" data-filter="critical" id="filter-critical">Critical</button>
+            <button class="filter-btn" data-filter="warning" id="filter-warning">Warning</button>
+          </div>
+        </div>
+      </header>
+      <div class="alerts-table-wrap">
+        <table class="alerts-table" id="alerts-table">
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>Time</th>
+              <th>Location</th>
+              <th>Risk Score</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── ANALYTICS PAGE ── -->
+    <section class="page" id="page-analytics">
+      <header class="page-header">
+        <div>
+          <h1>Analytics</h1>
+          <p class="page-subtitle">Risk trends and drift pattern analysis</p>
+        </div>
+      </header>
+      <div class="analytics-grid">
+        <div class="card chart-card">
+          <div class="card-header"><h2>Risk Score Over Time</h2></div>
+          <div class="chart-wrapper"><canvas id="chart-risk"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header"><h2>Speed & Heart Rate</h2></div>
+          <div class="chart-wrapper"><canvas id="chart-vitals"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header"><h2>Risk Distribution</h2></div>
+          <div class="chart-wrapper chart-small"><canvas id="chart-distribution"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header"><h2>Movement Distance</h2></div>
+          <div class="chart-wrapper"><canvas id="chart-distance"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SETTINGS PAGE ── -->
+    <section class="page" id="page-settings">
+      <header class="page-header">
+        <div>
+          <h1>Settings</h1>
+          <p class="page-subtitle">Configure system parameters</p>
+        </div>
+      </header>
+      <div class="settings-grid">
+        <div class="card settings-card">
+          <div class="card-header"><h2>Geofence Configuration</h2></div>
+          <div class="settings-body">
+            <div class="form-group">
+              <label>Safe Zone Latitude</label>
+              <input type="number" id="set-lat" step="0.0001" />
+            </div>
+            <div class="form-group">
+              <label>Safe Zone Longitude</label>
+              <input type="number" id="set-lon" step="0.0001" />
+            </div>
+            <div class="form-group">
+              <label>Safe Radius (meters): <strong id="radius-display">500</strong></label>
+              <input type="range" id="set-radius" min="100" max="2000" value="500" />
+            </div>
+            <button class="btn btn-primary" id="btn-save-geofence">Save Geofence</button>
+          </div>
+        </div>
+        <div class="card settings-card">
+          <div class="card-header"><h2>Notification Preferences</h2></div>
+          <div class="settings-body">
+            <div class="toggle-row">
+              <span>Email Alerts</span>
+              <label class="toggle"><input type="checkbox" id="toggle-email" checked /><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <span>High-Risk Only</span>
+              <label class="toggle"><input type="checkbox" id="toggle-high-only" /><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <span>Sound Notifications</span>
+              <label class="toggle"><input type="checkbox" id="toggle-sound" checked /><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+        <div class="card settings-card">
+          <div class="card-header"><h2>System Info</h2></div>
+          <div class="settings-body">
+            <div class="info-row"><span>Version</span><span>1.0.0</span></div>
+            <div class="info-row"><span>AI Model</span><span>Isolation Forest + LSTM</span></div>
+            <div class="info-row"><span>API Status</span><span class="status-badge online">Online</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
