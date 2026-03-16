@@ -1,0 +1,6 @@
+{
+  "extraPaths": ["."],
+  "venvPath": "d:/missing_person_ai",
+  "venv": "venv_new",
+  "reportMissingModuleSource": false
+}

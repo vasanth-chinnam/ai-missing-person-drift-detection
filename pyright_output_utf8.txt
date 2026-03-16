@@ -1,0 +1,71 @@
+﻿d:\missing_person_ai\app\main.py
+  d:\missing_person_ai\app\main.py:44:12 - error: "RiskScorer" is not defined (reportUndefinedVariable)
+  d:\missing_person_ai\app\main.py:45:12 - error: "AlertSystem" is not defined (reportUndefinedVariable)
+  d:\missing_person_ai\app\main.py:47:12 - error: "MovementHistoryAnalyzer" is not defined (reportUndefinedVariable)
+  d:\missing_person_ai\app\main.py:98:8 - error: Invalid conditional operand of type "bool | NDArray[bool_] | NDFrame"
+  ┬á┬áMethod __bool__ for type "NDFrame" returns type "NoReturn" rather than "bool" (reportGeneralTypeIssues)
+  d:\missing_person_ai\app\main.py:217:16 - error: "build_heatmap" is not defined (reportUndefinedVariable)
+  d:\missing_person_ai\app\main.py:221:16 - error: "build_history_map" is not defined (reportUndefinedVariable)
+  d:\missing_person_ai\app\main.py:236:19 - error: "RiskScorer" is not defined (reportUndefinedVariable)
+  d:\missing_person_ai\app\main.py:238:15 - error: "evaluate_model" is not defined (reportUndefinedVariable)
+d:\missing_person_ai\src\alerts.py
+  d:\missing_person_ai\src\alerts.py:213:22 - error: Object of type "None" cannot be called (reportOptionalCall)
+  d:\missing_person_ai\src\alerts.py:214:67 - error: Argument of type "str | None" cannot be assigned to parameter "to" of type "str" in function "create"
+  ┬á┬áType "str | None" is not assignable to type "str"
+  ┬á┬á┬á┬á"None" is not assignable to "str" (reportArgumentType)
+d:\missing_person_ai\src\detect_drift.py
+  d:\missing_person_ai\src\detect_drift.py:3:6 - warning: Import "tensorflow.keras.models" could not be resolved from source (reportMissingModuleSource)
+d:\missing_person_ai\src\generate_data.py
+  d:\missing_person_ai\src\generate_data.py:32:33 - error: Argument of type "list[str]" cannot be assigned to parameter "columns" of type "Axes | None" in function "__init__"
+  ┬á┬áType "list[str]" is not assignable to type "Axes | None"
+  ┬á┬á┬á┬á"list[str]" is not assignable to "ExtensionArray"
+  ┬á┬á┬á┬á"list[str]" is not assignable to "ndarray[Unknown, Unknown]"
+  ┬á┬á┬á┬á"list[str]" is not assignable to "Index"
+  ┬á┬á┬á┬á"list[str]" is not assignable to "Series"
+  ┬á┬á┬á┬á"list[str]" is incompatible with protocol "SequenceNotStr[Unknown]"
+  ┬á┬á┬á┬á┬á┬á"index" is an incompatible type
+  ┬á┬á┬á┬á┬á┬á┬á┬áType "(value: str, start: SupportsIndex = 0, stop: SupportsIndex = sys.maxsize, /) -> int" is not assignable to type "(value: Any, /, start: int = 0, stop: int = ...) -> int"
+    ... (reportArgumentType)
+d:\missing_person_ai\src\live_detection.py
+  d:\missing_person_ai\src\live_detection.py:14:17 - error: Argument of type "list[str]" cannot be assigned to parameter "columns" of type "Axes | None" in function "__init__"
+  ┬á┬áType "list[str]" is not assignable to type "Axes | None"
+  ┬á┬á┬á┬á"list[str]" is not assignable to "ExtensionArray"
+  ┬á┬á┬á┬á"list[str]" is not assignable to "ndarray[Unknown, Unknown]"
+  ┬á┬á┬á┬á"list[str]" is not assignable to "Index"
+  ┬á┬á┬á┬á"list[str]" is not assignable to "Series"
+  ┬á┬á┬á┬á"list[str]" is incompatible with protocol "SequenceNotStr[Unknown]"
+  ┬á┬á┬á┬á┬á┬á"index" is an incompatible type
+  ┬á┬á┬á┬á┬á┬á┬á┬áType "(value: str, start: SupportsIndex = 0, stop: SupportsIndex = sys.maxsize, /) -> int" is not assignable to type "(value: Any, /, start: int = 0, stop: int = ...) -> int"
+    ... (reportArgumentType)
+d:\missing_person_ai\src\map_visualizer.py
+  d:\missing_person_ai\src\map_visualizer.py:192:22 - error: Argument of type "tuple[Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown], Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]]" cannot be assigned to parameter "location" of type "Sequence[float] | None" in function "__init__"
+  ┬á┬áType "tuple[Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown], Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]]" is not assignable to type "Sequence[float] | None"
+  ┬á┬á┬á┬á"tuple[Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown], Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]]" is not assignable to "Sequence[float]"
+  ┬á┬á┬á┬á┬á┬áType parameter "_T_co@Sequence" is covariant, but "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" is not a subtype of "float"
+  ┬á┬á┬á┬á┬á┬á┬á┬áType "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" is not assignable to type "float"
+  ┬á┬á┬á┬á┬á┬á┬á┬á┬á┬á"Series" is not assignable to "float"
+  ┬á┬á┬á┬á"tuple[Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown], Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]]" is not assignable to "None" (reportArgumentType)
+d:\missing_person_ai\src\risk_scorer.py
+  d:\missing_person_ai\src\risk_scorer.py:183:21 - error: Argument of type "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" cannot be assigned to parameter "lat" of type "float" in function "score"
+  ┬á┬áType "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" is not assignable to type "float"
+  ┬á┬á┬á┬á"Series" is not assignable to "float" (reportArgumentType)
+  d:\missing_person_ai\src\risk_scorer.py:184:21 - error: Argument of type "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" cannot be assigned to parameter "lon" of type "float" in function "score"
+  ┬á┬áType "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" is not assignable to type "float"
+  ┬á┬á┬á┬á"Series" is not assignable to "float" (reportArgumentType)
+  d:\missing_person_ai\src\risk_scorer.py:185:27 - error: Argument of type "Unknown | None" cannot be assigned to parameter "speed_kmh" of type "float" in function "score"
+  ┬á┬áType "Unknown | None" is not assignable to type "float"
+  ┬á┬á┬á┬á"None" is not assignable to "float" (reportArgumentType)
+d:\missing_person_ai\src\routine_learner.py
+  d:\missing_person_ai\src\routine_learner.py:138:75 - error: Cannot access attribute "dropna" for class "ndarray[_Shape, Unknown]"
+  ┬á┬áAttribute "dropna" is unknown (reportAttributeAccessIssue)
+  d:\missing_person_ai\src\routine_learner.py:138:75 - error: Cannot access attribute "dropna" for class "NDArray[Unknown]"
+  ┬á┬áAttribute "dropna" is unknown (reportAttributeAccessIssue)
+  d:\missing_person_ai\src\routine_learner.py:165:56 - error: Cannot access attribute "dt" for class "DatetimeIndex"
+  ┬á┬áAttribute "dt" is unknown (reportAttributeAccessIssue)
+d:\missing_person_ai\src\train_lstm.py
+  d:\missing_person_ai\src\train_lstm.py:3:6 - warning: Import "tensorflow.keras.models" could not be resolved from source (reportMissingModuleSource)
+  d:\missing_person_ai\src\train_lstm.py:4:6 - warning: Import "tensorflow.keras.layers" could not be resolved from source (reportMissingModuleSource)
+d:\missing_person_ai\src\train_model.py
+  d:\missing_person_ai\src\train_model.py:11:19 - error: Argument of type "float" cannot be assigned to parameter "contamination" of type "str" in function "__init__"
+  ┬á┬á"float" is not assignable to "str" (reportArgumentType)
+20 errors, 3 warnings, 0 informations

@@ -29,7 +29,7 @@ for i in range(100):
 
     data.append([timestamp.isoformat(), lat, lon, speed, heart_rate])
 
-df = pd.DataFrame(data, columns=["timestamp", "latitude", "longitude", "speed", "heart_rate"])
+df = pd.DataFrame(data, columns=["timestamp", "latitude", "longitude", "speed", "heart_rate"]) # type: ignore
 
 df.to_csv("data/gps_data.csv", index=False)
 

@@ -1,319 +1,679 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Missing Person — Drift Detection System</title>
-  <meta name="description" content="AI-powered early drift detection system for tracking and protecting missing persons using GPS, anomaly detection, and geofencing." />
-
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
-  <!-- Leaflet CSS -->
+  <title>AI Missing Person Drift Detection</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --card: #1a2235;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --low: #22c55e;
+      --medium: #f59e0b;
+      --high: #ef4444;
+      --accent: #6366f1;
+      --font: 'Inter', system-ui, sans-serif;
+    }
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: 60px 1fr;
+    }
 
-  <!-- Leaflet Heat -->
-  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
 
-  <link rel="stylesheet" href="styles.css" />
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .header-stats span {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      background: var(--low);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: .5;
+        transform: scale(1.4);
+      }
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr 320px;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Person Cards ── */
+    .person-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.1s;
+    }
+
+    .person-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .person-card.selected {
+      border-color: var(--accent);
+    }
+
+    .person-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .person-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .risk-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .risk-LOW {
+      background: rgba(34, 197, 94, .15);
+      color: var(--low);
+    }
+
+    .risk-MEDIUM {
+      background: rgba(245, 158, 11, .15);
+      color: var(--medium);
+    }
+
+    .risk-HIGH {
+      background: rgba(239, 68, 68, .15);
+      color: var(--high);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .6;
+      }
+    }
+
+    .person-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .risk-bar-bg {
+      height: 4px;
+      background: rgba(255, 255, 255, .1);
+      border-radius: 2px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .risk-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── Map ── */
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Right Panel ── */
+    .right-panel {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Alert Feed ── */
+    .alert-item {
+      background: var(--card);
+      border-left: 3px solid var(--border);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    .alert-item.HIGH {
+      border-color: var(--high);
+    }
+
+    .alert-item.MEDIUM {
+      border-color: var(--medium);
+    }
+
+    .alert-item.LOW {
+      border-color: var(--low);
+    }
+
+    .alert-time {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    /* ── Score Breakdown ── */
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .score-label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .score-bar-wrap {
+      flex: 1;
+      margin: 0 10px;
+    }
+
+    .score-bar-bg {
+      height: 6px;
+      background: rgba(255, 255, 255, .08);
+      border-radius: 3px;
+    }
+
+    .score-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--accent);
+      transition: width 0.5s;
+    }
+
+    .score-pct {
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* ── Map controls ── */
+    .map-controls {
+      position: absolute;
+      top: 80px;
+      right: 340px;
+      z-index: 1000;
+      display: flex;
+      gap: 8px;
+    }
+
+    .map-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .map-btn:hover,
+    .map-btn.active {
+      background: var(--card);
+      border-color: var(--accent);
+    }
+
+    /* ── Evaluation Panel ── */
+    .eval-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .eval-card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .eval-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .eval-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+  </style>
 </head>
+
 <body>
-  <!-- ─── Sidebar ────────────────────────────────────────── -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
-          <path d="M2 12h20"/>
-        </svg>
-      </div>
-      <span class="brand-text">DriftGuard<span class="brand-ai">AI</span></span>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📍</div>
+      AI Drift Detection
     </div>
+    <div class="header-stats">
+      <div><span class="pulse"></span>Live Monitoring</div>
+      <div>Persons tracked: <span id="person-count">–</span></div>
+      <div>High risk: <span id="high-count" style="color:var(--high)">–</span></div>
+      <div>Updated: <span id="last-updated">–</span></div>
+    </div>
+  </header>
 
-    <nav class="sidebar-nav">
-      <a href="#" class="nav-item active" data-page="dashboard" id="nav-dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        <span>Dashboard</span>
-      </a>
-      <a href="#" class="nav-item" data-page="persons" id="nav-persons">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Persons</span>
-      </a>
-      <a href="#" class="nav-item" data-page="alerts" id="nav-alerts">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span>Alerts</span>
-        <span class="nav-badge" id="alert-badge">0</span>
-      </a>
-      <a href="#" class="nav-item" data-page="analytics" id="nav-analytics">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
-        <span>Analytics</span>
-      </a>
-      <a href="#" class="nav-item" data-page="settings" id="nav-settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
-        <span>Settings</span>
-      </a>
-    </nav>
+  <div class="layout">
+    <!-- Left sidebar: person cards -->
+    <aside class="sidebar">
+      <div class="sidebar-title">Monitored Persons</div>
+      <div id="person-list"></div>
+    </aside>
 
-    <div class="sidebar-footer">
-      <div class="system-status">
-        <span class="status-dot pulse"></span>
-        <span>System Active</span>
+    <!-- Map -->
+    <main style="position:relative">
+      <div id="map"></div>
+      <div class="map-controls">
+        <button class="map-btn active" onclick="setMapMode('live')">Live</button>
+        <button class="map-btn" onclick="setMapMode('heatmap')">Heatmap</button>
+        <button class="map-btn" onclick="setMapMode('history')">History</button>
+      </div>
+    </main>
+
+    <!-- Right panel: alerts + score breakdown -->
+    <div class="right-panel">
+      <div>
+        <div class="sidebar-title">Risk Score Breakdown</div>
+        <div id="score-breakdown">
+          <div style="color:var(--muted);font-size:13px">Select a person →</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sidebar-title">Model Evaluation</div>
+        <div class="eval-grid" id="eval-grid">
+          <div class="eval-card">
+            <div class="eval-value" id="ev-acc">–</div>
+            <div class="eval-label">Accuracy</div>
+          </div>
+          <div class="eval-card">
+            <div class="eval-value" id="ev-prec">–</div>
+            <div class="eval-label">Precision</div>
+          </div>
+          <div class="eval-card">
+            <div class="eval-value" id="ev-rec">–</div>
+            <div class="eval-label">Recall</div>
+          </div>
+          <div class="eval-card">
+            <div class="eval-value" id="ev-f1">–</div>
+            <div class="eval-label">F1 Score</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sidebar-title">Alert Feed</div>
+        <div id="alert-feed">
+          <div style="color:var(--muted);font-size:13px">No alerts yet</div>
+        </div>
       </div>
     </div>
-  </aside>
+  </div>
 
-  <!-- ─── Main Content ───────────────────────────────────── -->
-  <main class="main-content" id="main-content">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ── Map init ──────────────────────────────────────────────────────────────
+    const HOME = [17.4200, 78.3500];
+    const map = L.map('map', { zoomControl: false }).setView(HOME, 15);
+    L.control.zoom({ position: 'topleft' }).addTo(map);
 
-    <!-- ── DASHBOARD PAGE ── -->
-    <section class="page active" id="page-dashboard">
-      <header class="page-header">
-        <div>
-          <h1>Dashboard</h1>
-          <p class="page-subtitle">Real-time drift detection overview</p>
-        </div>
-        <div class="header-actions">
-          <div class="live-indicator">
-            <span class="live-dot pulse"></span>
-            <span>LIVE</span>
-          </div>
-        </div>
-      </header>
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '©OpenStreetMap ©CartoDB', maxZoom: 19
+    }).addTo(map);
 
-      <!-- Stats Cards -->
-      <div class="stats-grid" id="stats-grid">
-        <div class="stat-card" id="stat-total">
-          <div class="stat-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-          <div class="stat-info"><span class="stat-value" id="val-total">—</span><span class="stat-label">GPS Points</span></div>
+    // Safe zone circle
+    const safeZone = L.circle(HOME, {
+      radius: 500, color: '#22c55e', weight: 2,
+      fill: true, fillColor: '#22c55e', fillOpacity: 0.08
+    }).addTo(map).bindTooltip('Safe Zone (500m)');
+
+    // Home marker
+    L.marker(HOME, {
+      icon: L.divIcon({
+        html: '<div style="background:#22c55e;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4)">🏠</div>',
+        iconSize: [32, 32], iconAnchor: [16, 16]
+      })
+    }).addTo(map).bindTooltip('Home');
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let personMarkers = {};
+    let personPaths = {};
+    let selectedPerson = null;
+    const COLORS = { LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#ef4444' };
+    const PATH_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#22d3ee', '#84cc16'];
+
+    // ── Synthetic demo data ──────────────────────────────────────────────────
+    function generateDemoPersons() {
+      const persons = [
+        { id: 'P001', name: 'Ravi Kumar', risk: 'LOW', dist: 0.18, score: 0.12, lat: 17.421, lon: 78.351, speed: 2.1 },
+        { id: 'P002', name: 'Anita Sharma', risk: 'HIGH', dist: 1.82, score: 0.78, lat: 17.436, lon: 78.370, speed: 4.8 },
+        { id: 'P003', name: 'Mohan Rao', risk: 'MEDIUM', dist: 0.72, score: 0.51, lat: 17.4145, lon: 78.3421, speed: 3.2 },
+      ];
+      return persons;
+    }
+
+    function generatePath(person) {
+      const pts = [];
+      let lat = HOME[0], lon = HOME[1];
+      const steps = 20;
+      for (let i = 0; i < steps; i++) {
+        lat += (person.lat - HOME[0]) / steps + (Math.random() - 0.5) * 0.0005;
+        lon += (person.lon - HOME[1]) / steps + (Math.random() - 0.5) * 0.0005;
+        pts.push([lat, lon]);
+      }
+      return pts;
+    }
+
+    // ── Render person cards ────────────────────────────────────────────────────
+    function renderPersonCards(persons) {
+      const container = document.getElementById('person-list');
+      container.innerHTML = '';
+
+      persons.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'person-card' + (selectedPerson === p.id ? ' selected' : '');
+        card.id = `card-${p.id}`;
+        const barColor = COLORS[p.risk];
+        const scoreW = Math.round(p.score * 100);
+
+        card.innerHTML = `
+      <div class="person-header">
+        <div class="person-name">${p.name}</div>
+        <div class="risk-badge risk-${p.risk}">${p.risk}</div>
+      </div>
+      <div class="person-metrics">
+        <div class="metric">
+          <div class="metric-label">Distance</div>
+          <div class="metric-value" style="color:${barColor}">${p.dist.toFixed(2)}<small style="font-size:11px;font-weight:400"> km</small></div>
         </div>
-        <div class="stat-card" id="stat-risk">
-          <div class="stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-          <div class="stat-info"><span class="stat-value" id="val-risk">—</span><span class="stat-label">High Risk</span></div>
-        </div>
-        <div class="stat-card" id="stat-drift">
-          <div class="stat-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
-          <div class="stat-info"><span class="stat-value" id="val-drift">—</span><span class="stat-label">Drift Events</span></div>
-        </div>
-        <div class="stat-card" id="stat-persons">
-          <div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <div class="stat-info"><span class="stat-value" id="val-persons">—</span><span class="stat-label">Active Persons</span></div>
+        <div class="metric">
+          <div class="metric-label">Speed</div>
+          <div class="metric-value">${p.speed.toFixed(1)}<small style="font-size:11px;font-weight:400"> km/h</small></div>
         </div>
       </div>
-
-      <!-- Map + Risk Gauge Row -->
-      <div class="dashboard-grid">
-        <div class="card map-card">
-          <div class="card-header">
-            <h2>Live Tracking Map</h2>
-            <div class="card-actions">
-              <button class="btn-icon" id="btn-toggle-heat" title="Toggle heatmap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c-5.33 4.67-8 8.33-8 11a8 8 0 0 0 16 0c0-2.67-2.67-6.33-8-11z"/></svg>
-              </button>
-            </div>
-          </div>
-          <div id="map" class="map-container"></div>
-        </div>
-
-        <div class="side-panel">
-          <!-- Risk Gauge -->
-          <div class="card gauge-card">
-            <div class="card-header"><h2>Risk Level</h2></div>
-            <div class="gauge-wrapper">
-              <svg class="gauge" viewBox="0 0 200 120">
-                <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="16" stroke-linecap="round"/>
-                <path id="gauge-arc" d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="url(#gauge-gradient)" stroke-width="16" stroke-linecap="round" stroke-dasharray="0 251.3"/>
-                <defs>
-                  <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#10b981"/>
-                    <stop offset="50%" stop-color="#f59e0b"/>
-                    <stop offset="100%" stop-color="#ef4444"/>
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div class="gauge-value" id="gauge-value">0</div>
-              <div class="gauge-label" id="gauge-label">SAFE</div>
-            </div>
-          </div>
-
-          <!-- Recent Alerts -->
-          <div class="card alerts-card">
-            <div class="card-header"><h2>Recent Alerts</h2></div>
-            <div class="alert-feed" id="alert-feed">
-              <div class="empty-state small">No alerts yet</div>
-            </div>
-          </div>
-        </div>
+      <div class="risk-bar-bg">
+        <div class="risk-bar-fill" style="width:${scoreW}%;background:${barColor}"></div>
       </div>
-    </section>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">Risk score: ${scoreW}%</div>
+    `;
+        card.onclick = () => selectPerson(p, persons);
+        container.appendChild(card);
+      });
+    }
 
-    <!-- ── PERSONS PAGE ── -->
-    <section class="page" id="page-persons">
-      <header class="page-header">
-        <div>
-          <h1>Tracked Persons</h1>
-          <p class="page-subtitle">Manage monitored individuals</p>
-        </div>
-        <div class="header-actions">
-          <button class="btn btn-primary" id="btn-add-person">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Person
-          </button>
-        </div>
-      </header>
-      <div class="persons-grid" id="persons-grid"></div>
+    // ── Map markers ────────────────────────────────────────────────────────────
+    function updateMapMarkers(persons) {
+      persons.forEach((p, idx) => {
+        // Path
+        if (personPaths[p.id]) map.removeLayer(personPaths[p.id]);
+        const pathPts = generatePath(p);
+        personPaths[p.id] = L.polyline(pathPts, {
+          color: PATH_COLORS[idx % PATH_COLORS.length],
+          weight: 2.5, opacity: 0.7, dashArray: '6 4'
+        }).addTo(map);
 
-      <!-- Add Person Modal -->
-      <div class="modal-overlay" id="modal-overlay">
-        <div class="modal" id="modal-add-person">
-          <div class="modal-header">
-            <h2>Register New Person</h2>
-            <button class="btn-icon modal-close" id="modal-close">&times;</button>
-          </div>
-          <form id="form-add-person">
-            <div class="form-group">
-              <label for="inp-name">Full Name</label>
-              <input type="text" id="inp-name" required placeholder="e.g. Ramesh Verma" />
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="inp-age">Age</label>
-                <input type="number" id="inp-age" required placeholder="72" min="1" max="120" />
-              </div>
-              <div class="form-group">
-                <label for="inp-condition">Condition</label>
-                <input type="text" id="inp-condition" placeholder="e.g. Alzheimer's" />
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary btn-full">Register Person</button>
-          </form>
-        </div>
-      </div>
-    </section>
+        // Current position marker
+        if (personMarkers[p.id]) map.removeLayer(personMarkers[p.id]);
+        const color = COLORS[p.risk];
+        const pulse = p.risk === 'HIGH' ? `animation:blink 1.5s infinite` : '';
+        personMarkers[p.id] = L.marker([p.lat, p.lon], {
+          icon: L.divIcon({
+            html: `<div style="background:${color};color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;box-shadow:0 2px 12px ${color}66;${pulse}">${p.id.slice(-3)}</div>`,
+            iconSize: [36, 36], iconAnchor: [18, 18]
+          })
+        }).addTo(map)
+          .bindPopup(`<b>${p.name}</b><br>Risk: <b style="color:${color}">${p.risk}</b><br>Dist: ${p.dist.toFixed(2)} km`, { maxWidth: 200 });
+      });
+    }
 
-    <!-- ── ALERTS PAGE ── -->
-    <section class="page" id="page-alerts">
-      <header class="page-header">
-        <div>
-          <h1>Alert History</h1>
-          <p class="page-subtitle">All detected anomalies and warnings</p>
-        </div>
-        <div class="header-actions">
-          <div class="filter-group">
-            <button class="filter-btn active" data-filter="all" id="filter-all">All</button>
-            <button class="filter-btn" data-filter="critical" id="filter-critical">Critical</button>
-            <button class="filter-btn" data-filter="warning" id="filter-warning">Warning</button>
-          </div>
-        </div>
-      </header>
-      <div class="alerts-table-wrap">
-        <table class="alerts-table" id="alerts-table">
-          <thead>
-            <tr>
-              <th>Severity</th>
-              <th>Time</th>
-              <th>Location</th>
-              <th>Risk Score</th>
-              <th>Message</th>
-            </tr>
-          </thead>
-          <tbody id="alerts-tbody"></tbody>
-        </table>
-      </div>
-    </section>
+    // ── Select person ──────────────────────────────────────────────────────────
+    function selectPerson(p, persons) {
+      selectedPerson = p.id;
+      renderPersonCards(persons);
+      map.setView([p.lat, p.lon], 15, { animate: true });
+      renderScoreBreakdown(p);
+    }
 
-    <!-- ── ANALYTICS PAGE ── -->
-    <section class="page" id="page-analytics">
-      <header class="page-header">
-        <div>
-          <h1>Analytics</h1>
-          <p class="page-subtitle">Risk trends and drift pattern analysis</p>
-        </div>
-      </header>
-      <div class="analytics-grid">
-        <div class="card chart-card">
-          <div class="card-header"><h2>Risk Score Over Time</h2></div>
-          <div class="chart-wrapper"><canvas id="chart-risk"></canvas></div>
-        </div>
-        <div class="card chart-card">
-          <div class="card-header"><h2>Speed & Heart Rate</h2></div>
-          <div class="chart-wrapper"><canvas id="chart-vitals"></canvas></div>
-        </div>
-        <div class="card chart-card">
-          <div class="card-header"><h2>Risk Distribution</h2></div>
-          <div class="chart-wrapper chart-small"><canvas id="chart-distribution"></canvas></div>
-        </div>
-        <div class="card chart-card">
-          <div class="card-header"><h2>Movement Distance</h2></div>
-          <div class="chart-wrapper"><canvas id="chart-distance"></canvas></div>
-        </div>
-      </div>
-    </section>
+    // ── Score breakdown ────────────────────────────────────────────────────────
+    function renderScoreBreakdown(p) {
+      const scores = {
+        distance: Math.min(p.dist / 1.5, 1),
+        speed: Math.min(p.speed / 16, 1),
+        pattern: p.risk === 'HIGH' ? 0.7 : p.risk === 'MEDIUM' ? 0.4 : 0.1,
+        time_of_day: 0.15,
+      };
+      const labels = {
+        distance: 'Distance from home',
+        speed: 'Speed anomaly',
+        pattern: 'Pattern deviation',
+        time_of_day: 'Time of day',
+      };
 
-    <!-- ── SETTINGS PAGE ── -->
-    <section class="page" id="page-settings">
-      <header class="page-header">
-        <div>
-          <h1>Settings</h1>
-          <p class="page-subtitle">Configure system parameters</p>
-        </div>
-      </header>
-      <div class="settings-grid">
-        <div class="card settings-card">
-          <div class="card-header"><h2>Geofence Configuration</h2></div>
-          <div class="settings-body">
-            <div class="form-group">
-              <label>Safe Zone Latitude</label>
-              <input type="number" id="set-lat" step="0.0001" />
-            </div>
-            <div class="form-group">
-              <label>Safe Zone Longitude</label>
-              <input type="number" id="set-lon" step="0.0001" />
-            </div>
-            <div class="form-group">
-              <label>Safe Radius (meters): <strong id="radius-display">500</strong></label>
-              <input type="range" id="set-radius" min="100" max="2000" value="500" />
-            </div>
-            <button class="btn btn-primary" id="btn-save-geofence">Save Geofence</button>
+      let html = '';
+      for (const [key, val] of Object.entries(scores)) {
+        const pct = Math.round(val * 100);
+        const color = pct > 65 ? '#ef4444' : pct > 35 ? '#f59e0b' : '#22c55e';
+        html += `
+      <div class="score-row">
+        <div class="score-label">${labels[key]}</div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-bg">
+            <div class="score-bar" style="width:${pct}%;background:${color}"></div>
           </div>
         </div>
-        <div class="card settings-card">
-          <div class="card-header"><h2>Notification Preferences</h2></div>
-          <div class="settings-body">
-            <div class="toggle-row">
-              <span>Email Alerts</span>
-              <label class="toggle"><input type="checkbox" id="toggle-email" checked /><span class="toggle-slider"></span></label>
-            </div>
-            <div class="toggle-row">
-              <span>High-Risk Only</span>
-              <label class="toggle"><input type="checkbox" id="toggle-high-only" /><span class="toggle-slider"></span></label>
-            </div>
-            <div class="toggle-row">
-              <span>Sound Notifications</span>
-              <label class="toggle"><input type="checkbox" id="toggle-sound" checked /><span class="toggle-slider"></span></label>
-            </div>
-          </div>
-        </div>
-        <div class="card settings-card">
-          <div class="card-header"><h2>System Info</h2></div>
-          <div class="settings-body">
-            <div class="info-row"><span>Version</span><span>1.0.0</span></div>
-            <div class="info-row"><span>AI Model</span><span>Isolation Forest + LSTM</span></div>
-            <div class="info-row"><span>API Status</span><span class="status-badge online">Online</span></div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
+        <div class="score-pct" style="color:${color}">${pct}%</div>
+      </div>`;
+      }
+      document.getElementById('score-breakdown').innerHTML = html;
+    }
 
-  <script src="app.js"></script>
+    // ── Alert feed ─────────────────────────────────────────────────────────────
+    function updateAlertFeed(persons) {
+      const highRisk = persons.filter(p => p.risk === 'HIGH' || p.risk === 'MEDIUM');
+      if (!highRisk.length) return;
+
+      const feed = document.getElementById('alert-feed');
+      feed.innerHTML = highRisk.map(p => {
+        const time = new Date().toLocaleTimeString();
+        const msg = p.risk === 'HIGH'
+          ? `Person moved ${p.dist.toFixed(2)}km outside safe zone`
+          : `Person at ${p.dist.toFixed(2)}km from home`;
+        return `
+      <div class="alert-item ${p.risk}" style="margin-bottom:8px">
+        <div style="font-weight:600;font-size:12px">${p.name} – ${p.risk} RISK</div>
+        <div style="margin-top:3px;color:var(--muted)">${msg}</div>
+        <div class="alert-time">${time} · Alert sent to caregiver</div>
+      </div>`;
+      }).join('');
+    }
+
+    // ── Model evaluation ───────────────────────────────────────────────────────
+    function updateEvaluation() {
+      // Simulated evaluation metrics (replace with /api/evaluate call)
+      const metrics = { accuracy: 0.891, precision: 0.847, recall: 0.823, f1: 0.835 };
+      document.getElementById('ev-acc').textContent = (metrics.accuracy * 100).toFixed(1) + '%';
+      document.getElementById('ev-prec').textContent = (metrics.precision * 100).toFixed(1) + '%';
+      document.getElementById('ev-rec').textContent = (metrics.recall * 100).toFixed(1) + '%';
+      document.getElementById('ev-f1').textContent = (metrics.f1 * 100).toFixed(1) + '%';
+    }
+
+    // ── Map mode ───────────────────────────────────────────────────────────────
+    function setMapMode(mode) {
+      document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      // In production: switch tile layers or reload iframe map
+    }
+
+    // ── Main ───────────────────────────────────────────────────────────────────
+    function init() {
+      const persons = generateDemoPersons();
+
+      document.getElementById('person-count').textContent = persons.length;
+      document.getElementById('high-count').textContent = persons.filter(p => p.risk === 'HIGH').length;
+      document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+
+      renderPersonCards(persons);
+      updateMapMarkers(persons);
+      updateAlertFeed(persons);
+      updateEvaluation();
+
+      // Auto-select first high risk person
+      const highRisk = persons.find(p => p.risk === 'HIGH');
+      if (highRisk) selectPerson(highRisk, persons);
+
+      // Simulate live updates
+      setInterval(() => {
+        persons.forEach(p => {
+          p.lat += (Math.random() - 0.5) * 0.0008;
+          p.lon += (Math.random() - 0.5) * 0.0008;
+          p.dist = Math.sqrt((p.lat - HOME[0]) ** 2 + (p.lon - HOME[1]) ** 2) * 111;
+          p.speed = Math.max(0, p.speed + (Math.random() - 0.5) * 0.5);
+        });
+        document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+        renderPersonCards(persons);
+        updateMapMarkers(persons);
+        updateAlertFeed(persons);
+      }, 4000);
+    }
+
+    init();
+  </script>
 </body>
+
 </html>

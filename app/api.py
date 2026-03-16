@@ -46,7 +46,7 @@ alert_history = []
 def _compute_risk_row(row, idx):
     """Compute risk score and metadata for a single GPS row."""
     features = [[row["speed"], row["heart_rate"]]]
-    feat_df = pd.DataFrame(features, columns=["speed", "heart_rate"])
+    feat_df = pd.DataFrame(features, columns=["speed", "heart_rate"]) # type: ignore
     prediction = int(model.predict(feat_df)[0])
 
     outside, distance = check_geofence(row["latitude"], row["longitude"])
@@ -93,7 +93,8 @@ for point in computed:
 
 @app.route("/")
 def serve_frontend():
-    return send_from_directory(app.static_folder, "index.html")
+    folder = app.static_folder or "../frontend"
+    return send_from_directory(folder, "index.html")
 
 
 @app.route("/api/gps-data")

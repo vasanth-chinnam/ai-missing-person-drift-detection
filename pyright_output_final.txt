@@ -1,0 +1,24 @@
+﻿d:\missing_person_ai\src\detect_drift.py
+  d:\missing_person_ai\src\detect_drift.py:3:6 - warning: Import "tensorflow.keras.models" could not be resolved from source (reportMissingModuleSource)
+d:\missing_person_ai\src\map_visualizer.py
+  d:\missing_person_ai\src\map_visualizer.py:192:22 - error: Argument of type "tuple[Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown], Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]]" cannot be assigned to parameter "location" of type "Sequence[float] | None" in function "__init__"
+  ┬á┬áType "tuple[Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown], Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]]" is not assignable to type "Sequence[float] | None"
+  ┬á┬á┬á┬á"tuple[Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown], Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]]" is not assignable to "Sequence[float]"
+  ┬á┬á┬á┬á┬á┬áType parameter "_T_co@Sequence" is covariant, but "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" is not a subtype of "float"
+  ┬á┬á┬á┬á┬á┬á┬á┬áType "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" is not assignable to type "float"
+  ┬á┬á┬á┬á┬á┬á┬á┬á┬á┬á"Series" is not assignable to "float"
+  ┬á┬á┬á┬á"tuple[Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown], Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]]" is not assignable to "None" (reportArgumentType)
+d:\missing_person_ai\src\risk_scorer.py
+  d:\missing_person_ai\src\risk_scorer.py:183:21 - error: Argument of type "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" cannot be assigned to parameter "lat" of type "float" in function "score"
+  ┬á┬áType "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" is not assignable to type "float"
+  ┬á┬á┬á┬á"Series" is not assignable to "float" (reportArgumentType)
+  d:\missing_person_ai\src\risk_scorer.py:184:21 - error: Argument of type "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" cannot be assigned to parameter "lon" of type "float" in function "score"
+  ┬á┬áType "Series | Any | ndarray[_Shape, Unknown] | Unknown | NDArray[Unknown]" is not assignable to type "float"
+  ┬á┬á┬á┬á"Series" is not assignable to "float" (reportArgumentType)
+  d:\missing_person_ai\src\risk_scorer.py:185:27 - error: Argument of type "Unknown | None" cannot be assigned to parameter "speed_kmh" of type "float" in function "score"
+  ┬á┬áType "Unknown | None" is not assignable to type "float"
+  ┬á┬á┬á┬á"None" is not assignable to "float" (reportArgumentType)
+d:\missing_person_ai\src\train_lstm.py
+  d:\missing_person_ai\src\train_lstm.py:3:6 - warning: Import "tensorflow.keras.models" could not be resolved from source (reportMissingModuleSource)
+  d:\missing_person_ai\src\train_lstm.py:4:6 - warning: Import "tensorflow.keras.layers" could not be resolved from source (reportMissingModuleSource)
+4 errors, 3 warnings, 0 informations

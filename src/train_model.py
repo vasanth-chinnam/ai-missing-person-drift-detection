@@ -8,7 +8,7 @@ features = df[["speed", "heart_rate"]]
 
 model = IsolationForest(
     n_estimators=200,
-    contamination=0.02,
+    contamination=0.02, # type: ignore
     random_state=42
 )
 

@@ -11,7 +11,7 @@ df = pd.read_csv(os.path.join(os.path.dirname(__file__), "..", "data", "gps_data
 for index, row in df.iterrows():
     features = pd.DataFrame(
         [[row["speed"], row["heart_rate"]]],
-        columns=["speed", "heart_rate"]
+        columns=["speed", "heart_rate"] # type: ignore
     )
 
     prediction = model.predict(features)
