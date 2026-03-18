@@ -15,12 +15,12 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, BackgroundTasks # pyre-ignore[21]
+from fastapi.middleware.cors import CORSMiddleware # pyre-ignore[21]
+from fastapi.staticfiles import StaticFiles # pyre-ignore[21]
+from pydantic import BaseModel # pyre-ignore[21]
 from typing import Optional
-import pandas as pd
+import pandas as pd # pyre-ignore[21]
 import os
 from pathlib import Path
 from datetime import datetime
@@ -29,12 +29,12 @@ from datetime import datetime
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.data_generator import generate_dataset, HOME, SAFE_ZONE_RADIUS_KM
-from src.risk_scorer import RiskScorer, evaluate_model
-from src.alerts import AlertSystem
-from src.map_visualizer import build_live_tracking_map, build_heatmap, build_history_map
-from src.routine_learner import RoutineLearner, MovementHistoryAnalyzer
-from src.wearable_simulator import get_or_create_devices, get_all_device_status
+from src.data_generator import generate_dataset, HOME, SAFE_ZONE_RADIUS_KM # pyre-ignore[21]
+from src.risk_scorer import RiskScorer, evaluate_model # pyre-ignore[21]
+from src.alerts import AlertSystem # pyre-ignore[21]
+from src.map_visualizer import build_live_tracking_map, build_heatmap, build_history_map # pyre-ignore[21]
+from src.routine_learner import RoutineLearner, MovementHistoryAnalyzer # pyre-ignore[21]
+from src.wearable_simulator import get_or_create_devices, get_all_device_status # pyre-ignore[21]
 
 app = FastAPI(title="AI Missing Person Drift Detection", version="2.0")
 
@@ -107,7 +107,7 @@ def _get_live_df() -> pd.DataFrame:
     live_df = df.groupby("person_id").head(end_idx).copy()
     
     # Calculate live speed for the last recorded step
-    from src.data_generator import haversine
+    from src.data_generator import haversine # pyre-ignore[21]
     for pid in live_df["person_id"].unique():
         mask = live_df["person_id"] == pid
         sub = live_df[mask]
@@ -142,8 +142,8 @@ class PersonInfo(BaseModel):
 
 # ── Endpoints ───────────────────────────────────────────────────────────────
 
-@app.get("/")
-def root():
+@app.get("/api/health")
+def health():
     return {"message": "AI Missing Person Drift Detection v2.0", "status": "running"}
 
 
@@ -374,11 +374,11 @@ def get_owner():
 
 
 # ── Static files (MUST be last – catches all unmatched routes) ───────────────
-frontend_dir = Path("frontend")
+frontend_dir = Path("react-dashboard/dist")
 if frontend_dir.exists():
-    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+    app.mount("/", StaticFiles(directory="react-dashboard/dist", html=True), name="frontend")
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn # pyre-ignore[21]
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -2,22 +2,25 @@
   "version": 2,
   "builds": [
     {
-      "src": "app/api.py",
+      "src": "app/main.py",
       "use": "@vercel/python"
     },
     {
-      "src": "frontend/**",
-      "use": "@vercel/static"
+      "src": "react-dashboard/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "app/api.py"
+      "dest": "app/main.py"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/$1"
+      "dest": "react-dashboard/dist/$1"
     }
   ]
 }

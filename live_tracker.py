@@ -1,4 +1,4 @@
-import requests
+import requests # pyre-ignore[21]
 import time
 import math
 import random
@@ -49,7 +49,7 @@ for i in range(1, len(path)):
         "person_id": "P001",
         "latitude": curr_lat,
         "longitude": curr_lon,
-        "speed_kmh": round(speed_kmh, 2)
+        "speed_kmh": round(float(speed_kmh), 2) # type: ignore
     }
 
     try:

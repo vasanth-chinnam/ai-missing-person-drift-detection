@@ -35,13 +35,17 @@ export default function App() {
   const [ownerEmail, setOwnerEmail] = useState('');
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [emergencyTriggered, setEmergencyTriggered] = useState(false);
+  const [debugError, setDebugError] = useState(null);
 
   // Polling for live dashboard & history data
   useEffect(() => {
     const fetchData = async () => {
       try {
         const dashRes = await axios.get(`${API_BASE}/dashboard`);
-        if (!dashRes.data || typeof dashRes.data !== 'object' || !Array.isArray(dashRes.data.persons)) return;
+        if (!dashRes.data || typeof dashRes.data !== 'object' || !Array.isArray(dashRes.data.persons)) {
+          setDebugError('Invalid data format received:' + JSON.stringify(dashRes.data));
+          return;
+        }
         setDashboardData(dashRes.data);
 
         // Check for emergency (any person with 100% risk)
@@ -58,8 +62,10 @@ export default function App() {
         }
         const alertsRes = await axios.get(`${API_BASE}/alerts`);
         setAlerts(alertsRes.data.alerts);
+        setDebugError(null); // Clear errors on success
       } catch (err) {
         console.error("Data fetch error", err);
+        setDebugError(err.toString() + (err.response ? ' - ' + JSON.stringify(err.response.data) : ''));
       }
     };
     fetchData();
@@ -110,11 +116,21 @@ export default function App() {
   };
 
   if (!dashboardData) {
-    return <div style={{ color: 'var(--text-primary)', padding: '20px' }}>Loading Data Stream...</div>;
+    return (
+      <div style={{ color: 'var(--text-primary)', padding: '20px' }}>
+        <h2>Loading Data Stream...</h2>
+        {debugError && <div style={{color: 'red', marginTop: '20px', whiteSpace: 'pre-wrap'}}>Error: {debugError}</div>}
+      </div>
+    );
   }
   const { persons, home, safe_zone_km } = dashboardData;
   if (!persons || !Array.isArray(persons)) {
-    return <div style={{ color: 'var(--text-primary)', padding: '20px' }}>Waiting for valid data stream...</div>;
+    return (
+      <div style={{ color: 'var(--text-primary)', padding: '20px' }}>
+        <h2>Waiting for valid data stream...</h2>
+        {debugError && <div style={{color: 'red', marginTop: '20px', whiteSpace: 'pre-wrap'}}>Error: {debugError}</div>}
+      </div>
+    );
   }
 
   const highRiskCount = persons.filter(p => p?.risk_level === 'HIGH').length;
