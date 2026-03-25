@@ -13,7 +13,6 @@ folium
 matplotlib
 seaborn
 statsmodels
-tensorflow
 supabase
 python-dotenv
 gunicorn
