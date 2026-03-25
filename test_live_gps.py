@@ -13,11 +13,11 @@ import requests
 import time
 import math
 
-API_URL = "http://localhost:8080/api/location"
+API_URL = "https://ai-missing-person-drift-detection.onrender.com/api/location"
 
-# Home coordinates (Hyderabad area)
-HOME_LAT = 17.4200
-HOME_LON = 78.3500
+# Home coordinates (User's actual house)
+HOME_LAT = 17.3972319
+HOME_LON = 78.6100460
 
 # Simulate path: starting at home, walking away
 waypoints = [

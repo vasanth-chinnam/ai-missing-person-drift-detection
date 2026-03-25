@@ -1,7 +1,7 @@
 from geopy.distance import geodesic
 
-# Safe location (home coordinates — Hyderabad area)
-HOME_LOCATION = (17.4200, 78.3500)
+# Safe location (user's actual house)
+HOME_LOCATION = (17.3972319, 78.6100460)
 
 
 def calculate_risk(prediction, outside, route_deviation):
