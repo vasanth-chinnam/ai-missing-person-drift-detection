@@ -450,8 +450,8 @@
   <script>
     // ── Map init ──────────────────────────────────────────────────────────────
     // Initialize Map centered on User's house
-    const homeLocation = [17.3972319, 78.6100460];
-    const map = L.map('map', { zoomControl: false }).setView(homeLocation, 15);
+    const HOME = [17.3972319, 78.6100460];
+    const map = L.map('map', { zoomControl: false }).setView(HOME, 15);
     L.control.zoom({ position: 'topleft' }).addTo(map);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
