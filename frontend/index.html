@@ -457,11 +457,21 @@
       attribution: '©OpenStreetMap ©CartoDB', maxZoom: 19
     }).addTo(map);
 
-    // Safe zone circle
-    const safeZone = L.circle(HOME, {
-      radius: 500, color: '#22c55e', weight: 2,
-      fill: true, fillColor: '#22c55e', fillOpacity: 0.08
-    }).addTo(map).bindTooltip('Safe Zone (500m)');
+    // Safe zone circles (matching risk thresholds)
+    L.circle(HOME, {
+      radius: 100, color: '#22c55e', weight: 1.5,
+      fill: true, fillColor: '#22c55e', fillOpacity: 0.06, dashArray: '4 4'
+    }).addTo(map).bindTooltip('Safe Zone (100m)');
+
+    L.circle(HOME, {
+      radius: 300, color: '#f59e0b', weight: 1,
+      fill: false, dashArray: '6 4'
+    }).addTo(map).bindTooltip('Warning Zone (300m)');
+
+    L.circle(HOME, {
+      radius: 700, color: '#ef4444', weight: 1,
+      fill: false, dashArray: '8 4'
+    }).addTo(map).bindTooltip('Critical Zone (700m)');
 
     // Home marker
     L.marker(HOME, {
@@ -472,117 +482,160 @@
     }).addTo(map).bindTooltip('Home');
 
     // ── State ─────────────────────────────────────────────────────────────────
-    let personMarkers = {};
-    let personPaths = {};
-    let selectedPerson = null;
-    const COLORS = { LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#ef4444' };
-    const PATH_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#22d3ee', '#84cc16'];
+    let liveMarker = null;
+    let livePath = null;
+    let pathPoints = [];
+    let allLiveData = [];
+    const RISK_COLORS = {
+      safe: '#22c55e', warning: '#f59e0b', high: '#f97316', critical: '#ef4444'
+    };
 
-    // ── Synthetic demo data ──────────────────────────────────────────────────
-    function generateDemoPersons() {
-      const persons = [
-        { id: 'P001', name: 'Ravi Kumar', risk: 'LOW', dist: 0.18, score: 0.12, lat: 17.421, lon: 78.351, speed: 2.1 },
-        { id: 'P002', name: 'Anita Sharma', risk: 'HIGH', dist: 1.82, score: 0.78, lat: 17.436, lon: 78.370, speed: 4.8 },
-        { id: 'P003', name: 'Mohan Rao', risk: 'MEDIUM', dist: 0.72, score: 0.51, lat: 17.4145, lon: 78.3421, speed: 3.2 },
-      ];
-      return persons;
-    }
+    // ── Fetch live data from API ──────────────────────────────────────────────
+    async function fetchLiveData() {
+      try {
+        const res = await fetch('/api/live-data');
+        const data = await res.json();
 
-    function generatePath(person) {
-      const pts = [];
-      let lat = HOME[0], lon = HOME[1];
-      const steps = 20;
-      for (let i = 0; i < steps; i++) {
-        lat += (person.lat - HOME[0]) / steps + (Math.random() - 0.5) * 0.0005;
-        lon += (person.lon - HOME[1]) / steps + (Math.random() - 0.5) * 0.0005;
-        pts.push([lat, lon]);
+        if (!data || data.length === 0) {
+          document.getElementById('person-count').textContent = '0';
+          document.getElementById('high-count').textContent = '0';
+          document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+
+          const container = document.getElementById('person-list');
+          container.innerHTML = `
+            <div style="text-align:center;padding:30px 16px;color:var(--muted)">
+              <div style="font-size:32px;margin-bottom:12px">📡</div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">Waiting for GPS data...</div>
+              <div style="font-size:11px;line-height:1.5">
+                Send GPS from your phone using:<br>
+                <code style="background:var(--card);padding:2px 6px;border-radius:4px;font-size:10px">
+                  POST /api/location<br>
+                  {"lat": 17.42, "lon": 78.35}
+                </code>
+              </div>
+            </div>`;
+          return;
+        }
+
+        allLiveData = data;
+        const latest = data[data.length - 1];
+
+        // Build person summary from latest reading
+        const person = {
+          id: 'LIVE',
+          name: 'Tracked Person',
+          risk: latest.level,
+          dist: latest.distance_km,
+          speed: latest.speed,
+          score: latest.risk / 100,
+          lat: latest.latitude,
+          lon: latest.longitude,
+          label: latest.distance_label,
+          heartRate: latest.heartRate,
+          timestamp: latest.timestamp,
+        };
+
+        // Update header stats
+        document.getElementById('person-count').textContent = '1';
+        const riskLevel = latest.level;
+        document.getElementById('high-count').textContent =
+          (riskLevel === 'critical' || riskLevel === 'high') ? '1' : '0';
+        document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+
+        renderLiveCard(person);
+        updateLiveMap(data, person);
+        updateAlertFeed(person);
+        renderScoreBreakdown(person);
+
+      } catch (err) {
+        console.error('Failed to fetch live data:', err);
       }
-      return pts;
     }
 
-    // ── Render person cards ────────────────────────────────────────────────────
-    function renderPersonCards(persons) {
+    // ── Render live person card ─────────────────────────────────────────────
+    function renderLiveCard(p) {
       const container = document.getElementById('person-list');
-      container.innerHTML = '';
+      const color = RISK_COLORS[p.risk] || '#22c55e';
+      const riskLabel = p.risk.toUpperCase();
+      const scoreW = Math.round(p.score * 100);
 
-      persons.forEach((p, idx) => {
-        const card = document.createElement('div');
-        card.className = 'person-card' + (selectedPerson === p.id ? ' selected' : '');
-        card.id = `card-${p.id}`;
-        const barColor = COLORS[p.risk];
-        const scoreW = Math.round(p.score * 100);
-
-        card.innerHTML = `
-      <div class="person-header">
-        <div class="person-name">${p.name}</div>
-        <div class="risk-badge risk-${p.risk}">${p.risk}</div>
-      </div>
-      <div class="person-metrics">
-        <div class="metric">
-          <div class="metric-label">Distance</div>
-          <div class="metric-value" style="color:${barColor}">${p.dist.toFixed(2)}<small style="font-size:11px;font-weight:400"> km</small></div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Speed</div>
-          <div class="metric-value">${p.speed.toFixed(1)}<small style="font-size:11px;font-weight:400"> km/h</small></div>
-        </div>
-      </div>
-      <div class="risk-bar-bg">
-        <div class="risk-bar-fill" style="width:${scoreW}%;background:${barColor}"></div>
-      </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px">Risk score: ${scoreW}%</div>
-    `;
-        card.onclick = () => selectPerson(p, persons);
-        container.appendChild(card);
-      });
+      container.innerHTML = `
+        <div class="person-card selected">
+          <div class="person-header">
+            <div class="person-name">📱 ${p.name}</div>
+            <div class="risk-badge risk-${riskLabel}" style="background:${color}22;color:${color}">${riskLabel}</div>
+          </div>
+          <div class="person-metrics">
+            <div class="metric">
+              <div class="metric-label">Distance</div>
+              <div class="metric-value" style="color:${color}">${p.dist.toFixed(3)}<small style="font-size:11px;font-weight:400"> km</small></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Speed</div>
+              <div class="metric-value">${p.speed.toFixed(1)}<small style="font-size:11px;font-weight:400"> km/h</small></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Heart Rate</div>
+              <div class="metric-value">${p.heartRate}<small style="font-size:11px;font-weight:400"> bpm</small></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Status</div>
+              <div class="metric-value" style="font-size:12px;color:${color}">${p.label}</div>
+            </div>
+          </div>
+          <div class="risk-bar-bg">
+            <div class="risk-bar-fill" style="width:${scoreW}%;background:${color}"></div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">
+            Risk: ${scoreW}% · ${allLiveData.length} GPS points received
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">
+            Last update: ${p.timestamp}
+          </div>
+        </div>`;
     }
 
-    // ── Map markers ────────────────────────────────────────────────────────────
-    function updateMapMarkers(persons) {
-      persons.forEach((p, idx) => {
-        // Path
-        if (personPaths[p.id]) map.removeLayer(personPaths[p.id]);
-        const pathPts = generatePath(p);
-        personPaths[p.id] = L.polyline(pathPts, {
-          color: PATH_COLORS[idx % PATH_COLORS.length],
-          weight: 2.5, opacity: 0.7, dashArray: '6 4'
+    // ── Update map with live GPS trail ──────────────────────────────────────
+    function updateLiveMap(data, person) {
+      // Draw path trail
+      if (livePath) map.removeLayer(livePath);
+      pathPoints = data.map(d => [d.latitude, d.longitude]);
+
+      if (pathPoints.length > 1) {
+        livePath = L.polyline(pathPoints, {
+          color: '#6366f1', weight: 3, opacity: 0.8
         }).addTo(map);
+      }
 
-        // Current position marker
-        if (personMarkers[p.id]) map.removeLayer(personMarkers[p.id]);
-        const color = COLORS[p.risk];
-        const pulse = p.risk === 'HIGH' ? `animation:blink 1.5s infinite` : '';
-        personMarkers[p.id] = L.marker([p.lat, p.lon], {
-          icon: L.divIcon({
-            html: `<div style="background:${color};color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;box-shadow:0 2px 12px ${color}66;${pulse}">${p.id.slice(-3)}</div>`,
-            iconSize: [36, 36], iconAnchor: [18, 18]
-          })
-        }).addTo(map)
-          .bindPopup(`<b>${p.name}</b><br>Risk: <b style="color:${color}">${p.risk}</b><br>Dist: ${p.dist.toFixed(2)} km`, { maxWidth: 200 });
-      });
-    }
+      // Update current position marker
+      if (liveMarker) map.removeLayer(liveMarker);
+      const color = RISK_COLORS[person.risk] || '#22c55e';
+      const pulse = (person.risk === 'critical' || person.risk === 'high')
+        ? 'animation:blink 1.5s infinite' : '';
 
-    // ── Select person ──────────────────────────────────────────────────────────
-    function selectPerson(p, persons) {
-      selectedPerson = p.id;
-      renderPersonCards(persons);
-      map.setView([p.lat, p.lon], 15, { animate: true });
-      renderScoreBreakdown(p);
+      liveMarker = L.marker([person.lat, person.lon], {
+        icon: L.divIcon({
+          html: `<div style="background:${color};color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 16px ${color}88;${pulse}">📍</div>`,
+          iconSize: [40, 40], iconAnchor: [20, 20]
+        })
+      }).addTo(map)
+        .bindPopup(`<b>${person.name}</b><br>Risk: <b style="color:${color}">${person.risk.toUpperCase()}</b><br>Dist: ${person.dist.toFixed(3)} km<br>${person.label}`, { maxWidth: 200 });
+
+      // Pan to latest position
+      map.setView([person.lat, person.lon], map.getZoom(), { animate: true, duration: 0.5 });
     }
 
     // ── Score breakdown ────────────────────────────────────────────────────────
     function renderScoreBreakdown(p) {
       const scores = {
-        distance: Math.min(p.dist / 1.5, 1),
-        speed: Math.min(p.speed / 16, 1),
-        pattern: p.risk === 'HIGH' ? 0.7 : p.risk === 'MEDIUM' ? 0.4 : 0.1,
-        time_of_day: 0.15,
+        distance: Math.min(p.dist / 0.7, 1),
+        speed: Math.min(p.speed / 10, 1),
+        status: p.score,
       };
       const labels = {
         distance: 'Distance from home',
-        speed: 'Speed anomaly',
-        pattern: 'Pattern deviation',
-        time_of_day: 'Time of day',
+        speed: 'Movement speed',
+        status: 'Overall risk',
       };
 
       let html = '';
@@ -600,32 +653,52 @@
         <div class="score-pct" style="color:${color}">${pct}%</div>
       </div>`;
       }
+
+      // Add distance display
+      html += `
+        <div style="margin-top:12px;padding:10px;background:var(--card);border-radius:8px;font-size:12px">
+          <div style="color:var(--muted);margin-bottom:4px">Distance from home</div>
+          <div style="font-size:18px;font-weight:700">${p.dist.toFixed(3)} km</div>
+          <div style="font-size:11px;color:var(--muted)">${(p.dist * 1000).toFixed(0)} meters</div>
+        </div>`;
+
       document.getElementById('score-breakdown').innerHTML = html;
     }
 
     // ── Alert feed ─────────────────────────────────────────────────────────────
-    function updateAlertFeed(persons) {
-      const highRisk = persons.filter(p => p.risk === 'HIGH' || p.risk === 'MEDIUM');
-      if (!highRisk.length) return;
-
+    function updateAlertFeed(person) {
       const feed = document.getElementById('alert-feed');
-      feed.innerHTML = highRisk.map(p => {
-        const time = new Date().toLocaleTimeString();
-        const msg = p.risk === 'HIGH'
-          ? `Person moved ${p.dist.toFixed(2)}km outside safe zone`
-          : `Person at ${p.dist.toFixed(2)}km from home`;
-        return `
-      <div class="alert-item ${p.risk}" style="margin-bottom:8px">
-        <div style="font-weight:600;font-size:12px">${p.name} – ${p.risk} RISK</div>
-        <div style="margin-top:3px;color:var(--muted)">${msg}</div>
-        <div class="alert-time">${time} · Alert sent to caregiver</div>
-      </div>`;
-      }).join('');
+      if (person.risk === 'safe') {
+        feed.innerHTML = `
+          <div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">
+            🟢 Person is in safe zone — no alerts
+          </div>`;
+        return;
+      }
+
+      const time = new Date().toLocaleTimeString();
+      const alertClass = (person.risk === 'critical') ? 'HIGH' : 'MEDIUM';
+      const msg = `Person is ${person.dist.toFixed(3)} km from home — ${person.label}`;
+
+      // Prepend new alert (keep last 10)
+      const existing = feed.innerHTML;
+      const newAlert = `
+        <div class="alert-item ${alertClass}" style="margin-bottom:8px">
+          <div style="font-weight:600;font-size:12px">${person.risk.toUpperCase()} RISK</div>
+          <div style="margin-top:3px;color:var(--muted)">${msg}</div>
+          <div class="alert-time">${time} · Alert active</div>
+        </div>`;
+
+      feed.innerHTML = newAlert + existing;
+      // Keep only last 10 alerts
+      const items = feed.querySelectorAll('.alert-item');
+      if (items.length > 10) {
+        for (let i = 10; i < items.length; i++) items[i].remove();
+      }
     }
 
     // ── Model evaluation ───────────────────────────────────────────────────────
     function updateEvaluation() {
-      // Simulated evaluation metrics (replace with /api/evaluate call)
       const metrics = { accuracy: 0.891, precision: 0.847, recall: 0.823, f1: 0.835 };
       document.getElementById('ev-acc').textContent = (metrics.accuracy * 100).toFixed(1) + '%';
       document.getElementById('ev-prec').textContent = (metrics.precision * 100).toFixed(1) + '%';
@@ -637,39 +710,17 @@
     function setMapMode(mode) {
       document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
       event.target.classList.add('active');
-      // In production: switch tile layers or reload iframe map
     }
 
     // ── Main ───────────────────────────────────────────────────────────────────
     function init() {
-      const persons = generateDemoPersons();
-
-      document.getElementById('person-count').textContent = persons.length;
-      document.getElementById('high-count').textContent = persons.filter(p => p.risk === 'HIGH').length;
-      document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
-
-      renderPersonCards(persons);
-      updateMapMarkers(persons);
-      updateAlertFeed(persons);
       updateEvaluation();
+      fetchLiveData();
 
-      // Auto-select first high risk person
-      const highRisk = persons.find(p => p.risk === 'HIGH');
-      if (highRisk) selectPerson(highRisk, persons);
-
-      // Simulate live updates
+      // Auto-refresh every 3 seconds
       setInterval(() => {
-        persons.forEach(p => {
-          p.lat += (Math.random() - 0.5) * 0.0008;
-          p.lon += (Math.random() - 0.5) * 0.0008;
-          p.dist = Math.sqrt((p.lat - HOME[0]) ** 2 + (p.lon - HOME[1]) ** 2) * 111;
-          p.speed = Math.max(0, p.speed + (Math.random() - 0.5) * 0.5);
-        });
-        document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
-        renderPersonCards(persons);
-        updateMapMarkers(persons);
-        updateAlertFeed(persons);
-      }, 4000);
+        fetchLiveData();
+      }, 3000);
     }
 
     init();

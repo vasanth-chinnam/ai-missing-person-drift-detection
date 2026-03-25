@@ -2,6 +2,11 @@ import sys
 import os
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# Load environment variables (mostly for local use)
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 # Add the root directory to sys.path so that 'src' can be imported natively
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -12,7 +17,7 @@ import pandas as pd # pyre-ignore[21]
 import joblib # pyre-ignore[21]
 
 from src.geofence import check_geofence, SAFE_LOCATION, SAFE_RADIUS # pyre-ignore[21]
-from src.risk_engine import calculate_risk # pyre-ignore[21]
+from src.risk_engine import calculate_risk, calculate_risk_from_distance # pyre-ignore[21]
 from src.trajectory_predictor import detect_route_deviation # pyre-ignore[21]
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
@@ -21,6 +26,16 @@ CORS(app)
 # ── Load data & models ──────────────────────────────────────────────
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "gps_data.csv")
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "models", "anomaly_model.pkl")
+
+# Initialize Supabase client
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+else:
+    print("WARNING: Supabase credentials not found in env.")
+    supabase = None
 
 df = pd.read_csv(DATA_PATH)
 model = joblib.load(MODEL_PATH)
@@ -176,7 +191,108 @@ def update_geofence():
     return jsonify(geofence_config)
 
 
+# ── Live GPS Endpoints ───────────────────────────────────────
+
+@app.route("/api/location", methods=["POST"])
+def receive_location():
+    """
+    Receive live GPS from a phone / Postman / wearable device.
+    Body: { "lat": float, "lon": float, "speed": float (optional), "heart_rate": int (optional) }
+    """
+    data = request.json
+    if not data or "lat" not in data or "lon" not in data:
+        return jsonify({"error": "lat and lon are required"}), 400
+
+    lat = float(data["lat"])
+    lon = float(data["lon"])
+    speed = float(data.get("speed", 0))
+    heart_rate = int(data.get("heart_rate", 72))
+    ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Compute real km-based risk
+    risk_result = calculate_risk_from_distance(lat, lon)
+
+    if supabase:
+        try:
+            # We insert strictly what is in the table (lat, lon, person_id)
+            # The database auto-generates id and created_at
+            supabase.table("locations").insert({
+                "latitude": lat,
+                "longitude": lon,
+                "person_id": "P001"
+            }).execute()
+        except Exception as e:
+            print(f"Supabase error: {e}")
+
+    return jsonify({
+        "status": "success",
+        "timestamp": ts,
+        "latitude": lat,
+        "longitude": lon,
+        "speed": speed,
+        "heart_rate": heart_rate,
+        **risk_result,
+    })
+
+
+@app.route("/api/live-data")
+def get_live_data():
+    """
+    Returns all live GPS readings with computed risk scores.
+    The frontend polls this endpoint every few seconds.
+    """
+    if not supabase:
+        return jsonify([])
+
+    try:
+        # Fetch the last 100 locations from Supabase, ordered old->new for path trail
+        response = supabase.table("locations").select("*").order("created_at", desc=False).limit(100).execute()
+        data = response.data
+    except Exception as e:
+        print(f"Supabase error reading: {e}")
+        return jsonify([])
+
+    if not data:
+        return jsonify([])
+
+    results = []
+    for idx, row in enumerate(data):
+        lat = float(row["latitude"])
+        lon = float(row["longitude"])
+        risk_result = calculate_risk_from_distance(lat, lon)
+        
+        # We synthesize speed and heart_rate since we don't store them in DB
+        # This keeps the dashboard UI fully packed with data
+        results.append({
+            "index": idx,
+            "timestamp": row.get("created_at", ""),
+            "latitude": lat,
+            "longitude": lon,
+            "speed": 4.5, # Placeholder speed
+            "heartRate": 80, # Placeholder heart rate
+            "risk": risk_result["risk_score"],
+            "level": risk_result["risk_level"],
+            "distance_km": risk_result["distance_km"],
+            "distance_label": risk_result["distance_label"],
+        })
+
+    return jsonify(results)
+
+
+@app.route("/api/live-reset", methods=["POST"])
+def reset_live_data():
+    """Clear all live GPS data (for demo resets)."""
+    if supabase:
+        try:
+            # Delete all locations from the table
+            supabase.table("locations").delete().neq("id", -1).execute()
+        except Exception as e:
+            print(f"Supabase error resetting: {e}")
+    return jsonify({"status": "reset"})
+
+
 if __name__ == "__main__":
-    print("\n  🚀  API running at http://localhost:5000")
-    print("  📡  Frontend at   http://localhost:5000\n")
-    app.run(debug=True, port=5000)
+    print("\n  🚀  API running at http://localhost:8080")
+    print("  📡  Frontend at   http://localhost:8080\n")
+    # Using port 8080 as it's often more reliable than 5000
+    app.run(debug=True, port=8080, host="0.0.0.0")

@@ -10,8 +10,10 @@ uvicorn
 pydantic
 twilio
 folium
-scikit-learn
 matplotlib
 seaborn
 statsmodels
 tensorflow
+supabase
+python-dotenv
+gunicorn

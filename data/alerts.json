@@ -286,5 +286,113 @@
     "extra_info": "",
     "maps_link": "https://maps.google.com/?q=17.404617282079705,78.36949175808834",
     "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P001\nDistance from home: 2.68 km\nLocation: 17.40462, 78.36949\nMaps: https://maps.google.com/?q=17.404617282079705,78.36949175808834\nTime: 2026-03-16 17:22:29"
+  },
+  {
+    "id": "P002_20260318153902",
+    "person_id": "P002",
+    "risk_level": "MEDIUM",
+    "dist_km": 1.32,
+    "latitude": 17.409610964418057,
+    "longitude": 78.35594660006271,
+    "timestamp": "2026-03-18T15:39:02.431164",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.409610964418057,78.35594660006271",
+    "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P002\nDistance from home: 1.32 km\nLocation: 17.40961, 78.35595\nMaps: https://maps.google.com/?q=17.409610964418057,78.35594660006271\nTime: 2026-03-18 15:39:02"
+  },
+  {
+    "id": "P003_20260318154443",
+    "person_id": "P003",
+    "risk_level": "MEDIUM",
+    "dist_km": 1.5,
+    "latitude": 17.41200354212388,
+    "longitude": 78.36132875153326,
+    "timestamp": "2026-03-18T15:44:43.567271",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.41200354212388,78.36132875153326",
+    "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P003\nDistance from home: 1.50 km\nLocation: 17.41200, 78.36133\nMaps: https://maps.google.com/?q=17.41200354212388,78.36132875153326\nTime: 2026-03-18 15:44:43"
+  },
+  {
+    "id": "P001_20260318155123",
+    "person_id": "P001",
+    "risk_level": "MEDIUM",
+    "dist_km": 2.32,
+    "latitude": 17.43297683603579,
+    "longitude": 78.36709147830933,
+    "timestamp": "2026-03-18T15:51:23.924635",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.43297683603579,78.36709147830933",
+    "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P001\nDistance from home: 2.32 km\nLocation: 17.43298, 78.36709\nMaps: https://maps.google.com/?q=17.43297683603579,78.36709147830933\nTime: 2026-03-18 15:51:23"
+  },
+  {
+    "id": "P003_20260318155405",
+    "person_id": "P003",
+    "risk_level": "MEDIUM",
+    "dist_km": 1.53,
+    "latitude": 17.430647665326557,
+    "longitude": 78.35921542336713,
+    "timestamp": "2026-03-18T15:54:05.302717",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.430647665326557,78.35921542336713",
+    "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P003\nDistance from home: 1.53 km\nLocation: 17.43065, 78.35922\nMaps: https://maps.google.com/?q=17.430647665326557,78.35921542336713\nTime: 2026-03-18 15:54:05"
+  },
+  {
+    "id": "P001_20260318155546",
+    "person_id": "P001",
+    "risk_level": "MEDIUM",
+    "dist_km": 2.23,
+    "latitude": 17.433221708616358,
+    "longitude": 78.36583021230247,
+    "timestamp": "2026-03-18T15:55:46.433596",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.433221708616358,78.36583021230247",
+    "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P001\nDistance from home: 2.23 km\nLocation: 17.43322, 78.36583\nMaps: https://maps.google.com/?q=17.433221708616358,78.36583021230247\nTime: 2026-03-18 15:55:46"
+  },
+  {
+    "id": "P001_20260318155656",
+    "person_id": "P001",
+    "risk_level": "HIGH",
+    "dist_km": 1.61,
+    "latitude": 17.429333333333336,
+    "longitude": 78.36166666666666,
+    "timestamp": "2026-03-18T15:56:56.550755",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.429333333333336,78.36166666666666",
+    "message": "\u26a0\ufe0f ALERT \u2013 HIGH RISK\nPerson: P001\nDistance from home: 1.61 km\nLocation: 17.42933, 78.36167\nMaps: https://maps.google.com/?q=17.429333333333336,78.36166666666666\nTime: 2026-03-18 15:56:56"
+  },
+  {
+    "id": "P002_20260318160407",
+    "person_id": "P002",
+    "risk_level": "MEDIUM",
+    "dist_km": 1.39,
+    "latitude": 17.42945631050958,
+    "longitude": 78.341376388119,
+    "timestamp": "2026-03-18T16:04:07.782536",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.42945631050958,78.341376388119",
+    "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P002\nDistance from home: 1.39 km\nLocation: 17.42946, 78.34138\nMaps: https://maps.google.com/?q=17.42945631050958,78.341376388119\nTime: 2026-03-18 16:04:07"
+  },
+  {
+    "id": "P003_20260318160531",
+    "person_id": "P003",
+    "risk_level": "MEDIUM",
+    "dist_km": 1.25,
+    "latitude": 17.430025493249616,
+    "longitude": 78.35538340459853,
+    "timestamp": "2026-03-18T16:05:31.779941",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.430025493249616,78.35538340459853",
+    "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P003\nDistance from home: 1.25 km\nLocation: 17.43003, 78.35538\nMaps: https://maps.google.com/?q=17.430025493249616,78.35538340459853\nTime: 2026-03-18 16:05:31"
+  },
+  {
+    "id": "P003_20260325175656",
+    "person_id": "P003",
+    "risk_level": "MEDIUM",
+    "dist_km": 1.5,
+    "latitude": 17.409464531331817,
+    "longitude": 78.34117338062222,
+    "timestamp": "2026-03-25T17:56:56.565673",
+    "extra_info": "",
+    "maps_link": "https://maps.google.com/?q=17.409464531331817,78.34117338062222",
+    "message": "\u26a0\ufe0f ALERT \u2013 MEDIUM RISK\nPerson: P003\nDistance from home: 1.50 km\nLocation: 17.40946, 78.34117\nMaps: https://maps.google.com/?q=17.409464531331817,78.34117338062222\nTime: 2026-03-25 17:56:56"
   }
 ]

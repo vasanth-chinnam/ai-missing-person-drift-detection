@@ -1,0 +1,5 @@
+{
+  "python.analysis.extraPaths": ["./"],
+  "python.autoComplete.extraPaths": ["./"],
+  "python.defaultInterpreterPath": ".\\venv_new\\Scripts\\python.exe"
+}
