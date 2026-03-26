@@ -21,366 +21,67 @@
       --font: 'Inter', system-ui, sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; display: grid; grid-template-rows: 60px 1fr; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      min-height: 100vh;
-      display: grid;
-      grid-template-rows: 60px 1fr;
-    }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+    .logo-icon { width: 30px; height: 30px; background: linear-gradient(135deg, var(--accent), #8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .header-stats { display: flex; gap: 20px; font-size: 13px; color: var(--muted); }
+    .header-stats span { color: var(--text); font-weight: 500; }
+    .pulse { width: 8px; height: 8px; background: var(--low); border-radius: 50%; animation: pulse 2s infinite; display: inline-block; margin-right: 6px; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(1.4); } }
 
-    /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-    }
+    .layout { display: grid; grid-template-columns: 340px 1fr 320px; height: calc(100vh - 60px); overflow: hidden; }
+    .sidebar { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; }
+    .sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 700;
-      font-size: 15px;
-      letter-spacing: -0.3px;
-    }
+    .person-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.2s, transform 0.1s; }
+    .person-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .person-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .person-name { font-weight: 600; font-size: 14px; }
+    .risk-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.5px; }
+    .risk-LOW { background: rgba(34, 197, 94, .15); color: var(--low); }
+    .risk-MEDIUM { background: rgba(245, 158, 11, .15); color: var(--medium); }
+    .risk-HIGH { background: rgba(239, 68, 68, .15); color: var(--high); animation: blink 1.5s ease-in-out infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
 
-    .logo-icon {
-      width: 30px;
-      height: 30px;
-      background: linear-gradient(135deg, var(--accent), #8b5cf6);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-    }
+    .person-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric { background: var(--surface); border-radius: 8px; padding: 8px 10px; }
+    .metric-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-value { font-size: 16px; font-weight: 600; margin-top: 2px; }
+    .risk-bar-bg { height: 4px; background: rgba(255, 255, 255, .1); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+    .risk-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
 
-    .header-stats {
-      display: flex;
-      gap: 20px;
-      font-size: 13px;
-      color: var(--muted);
-    }
+    #map { width: 100%; height: 100%; }
+    .right-panel { background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 
-    .header-stats span {
-      color: var(--text);
-      font-weight: 500;
-    }
+    .alert-item { background: var(--card); border-left: 3px solid var(--border); border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: 12px; }
+    .alert-item.HIGH { border-color: var(--high); }
+    .alert-item.MEDIUM { border-color: var(--medium); }
+    .alert-time { color: var(--muted); font-size: 11px; margin-top: 4px; }
 
-    .pulse {
-      width: 8px;
-      height: 8px;
-      background: var(--low);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-      display: inline-block;
-      margin-right: 6px;
-    }
+    .score-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .score-label { font-size: 12px; color: var(--muted); }
+    .score-bar-wrap { flex: 1; margin: 0 10px; }
+    .score-bar-bg { height: 6px; background: rgba(255, 255, 255, .08); border-radius: 3px; }
+    .score-bar { height: 6px; border-radius: 3px; background: var(--accent); transition: width 0.5s; }
+    .score-pct { font-size: 12px; font-weight: 600; min-width: 36px; text-align: right; }
 
-    @keyframes pulse {
+    .map-controls { position: absolute; top: 80px; right: 340px; z-index: 1000; display: flex; gap: 8px; }
+    .map-btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 7px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: background 0.2s; }
+    .map-btn:hover, .map-btn.active { background: var(--card); border-color: var(--accent); }
 
-      0%,
-      100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-
-      50% {
-        opacity: .5;
-        transform: scale(1.4);
-      }
-    }
-
-    /* ── Layout ── */
-    .layout {
-      display: grid;
-      grid-template-columns: 340px 1fr 320px;
-      height: calc(100vh - 60px);
-      overflow: hidden;
-    }
-
-    /* ── Sidebar ── */
-    .sidebar {
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      overflow-y: auto;
-      padding: 16px;
-    }
-
-    .sidebar-title {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    /* ── Person Cards ── */
-    .person-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: border-color 0.2s, transform 0.1s;
-    }
-
-    .person-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-1px);
-    }
-
-    .person-card.selected {
-      border-color: var(--accent);
-    }
-
-    .person-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .person-name {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .risk-badge {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 20px;
-      letter-spacing: 0.5px;
-    }
-
-    .risk-LOW {
-      background: rgba(34, 197, 94, .15);
-      color: var(--low);
-    }
-
-    .risk-MEDIUM {
-      background: rgba(245, 158, 11, .15);
-      color: var(--medium);
-    }
-
-    .risk-HIGH {
-      background: rgba(239, 68, 68, .15);
-      color: var(--high);
-      animation: blink 1.5s ease-in-out infinite;
-    }
-
-    @keyframes blink {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: .6;
-      }
-    }
-
-    .person-metrics {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .metric {
-      background: var(--surface);
-      border-radius: 8px;
-      padding: 8px 10px;
-    }
-
-    .metric-label {
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .metric-value {
-      font-size: 16px;
-      font-weight: 600;
-      margin-top: 2px;
-    }
-
-    .risk-bar-bg {
-      height: 4px;
-      background: rgba(255, 255, 255, .1);
-      border-radius: 2px;
-      margin-top: 10px;
-      overflow: hidden;
-    }
-
-    .risk-bar-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.5s ease;
-    }
-
-    /* ── Map ── */
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* ── Right Panel ── */
-    .right-panel {
-      background: var(--surface);
-      border-left: 1px solid var(--border);
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    /* ── Alert Feed ── */
-    .alert-item {
-      background: var(--card);
-      border-left: 3px solid var(--border);
-      border-radius: 0 8px 8px 0;
-      padding: 10px 12px;
-      font-size: 12px;
-    }
-
-    .alert-item.HIGH {
-      border-color: var(--high);
-    }
-
-    .alert-item.MEDIUM {
-      border-color: var(--medium);
-    }
-
-    .alert-item.LOW {
-      border-color: var(--low);
-    }
-
-    .alert-time {
-      color: var(--muted);
-      font-size: 11px;
-      margin-top: 4px;
-    }
-
-    /* ── Score Breakdown ── */
-    .score-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .score-label {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .score-bar-wrap {
-      flex: 1;
-      margin: 0 10px;
-    }
-
-    .score-bar-bg {
-      height: 6px;
-      background: rgba(255, 255, 255, .08);
-      border-radius: 3px;
-    }
-
-    .score-bar {
-      height: 6px;
-      border-radius: 3px;
-      background: var(--accent);
-      transition: width 0.5s;
-    }
-
-    .score-pct {
-      font-size: 12px;
-      font-weight: 600;
-      min-width: 36px;
-      text-align: right;
-    }
-
-    /* ── Map controls ── */
-    .map-controls {
-      position: absolute;
-      top: 80px;
-      right: 340px;
-      z-index: 1000;
-      display: flex;
-      gap: 8px;
-    }
-
-    .map-btn {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 7px 14px;
-      border-radius: 8px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .map-btn:hover,
-    .map-btn.active {
-      background: var(--card);
-      border-color: var(--accent);
-    }
-
-    /* ── Evaluation Panel ── */
-    .eval-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .eval-card {
-      background: var(--card);
-      border-radius: 10px;
-      padding: 12px;
-      text-align: center;
-    }
-
-    .eval-value {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--accent);
-    }
-
-    .eval-label {
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-top: 2px;
-    }
+    .eval-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .eval-card { background: var(--card); border-radius: 10px; padding: 12px; text-align: center; }
+    .eval-value { font-size: 22px; font-weight: 700; color: var(--accent); }
+    .eval-label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
   </style>
 </head>
 
 <body>
-
   <header>
-    <div class="logo">
-      <div class="logo-icon">📍</div>
-      AI Drift Detection
-    </div>
+    <div class="logo"><div class="logo-icon">📍</div>AI Drift Detection</div>
     <div class="header-stats">
       <div><span class="pulse"></span>Live Monitoring</div>
       <div>Persons tracked: <span id="person-count">–</span></div>
@@ -390,13 +91,7 @@
   </header>
 
   <div class="layout">
-    <!-- Left sidebar: person cards -->
-    <aside class="sidebar">
-      <div class="sidebar-title">Monitored Persons</div>
-      <div id="person-list"></div>
-    </aside>
-
-    <!-- Map -->
+    <aside class="sidebar"><div class="sidebar-title">Monitored Persons</div><div id="person-list"></div></aside>
     <main style="position:relative">
       <div id="map"></div>
       <div class="map-controls">
@@ -405,51 +100,23 @@
         <button class="map-btn" onclick="setMapMode('history')">History</button>
       </div>
     </main>
-
-    <!-- Right panel: alerts + score breakdown -->
     <div class="right-panel">
-      <div>
-        <div class="sidebar-title">Risk Score Breakdown</div>
-        <div id="score-breakdown">
-          <div style="color:var(--muted);font-size:13px">Select a person →</div>
-        </div>
-      </div>
-
+      <div><div class="sidebar-title">Risk Score Breakdown</div><div id="score-breakdown"><div style="color:var(--muted);font-size:13px">Select a person →</div></div></div>
       <div>
         <div class="sidebar-title">Model Evaluation</div>
         <div class="eval-grid" id="eval-grid">
-          <div class="eval-card">
-            <div class="eval-value" id="ev-acc">–</div>
-            <div class="eval-label">Accuracy</div>
-          </div>
-          <div class="eval-card">
-            <div class="eval-value" id="ev-prec">–</div>
-            <div class="eval-label">Precision</div>
-          </div>
-          <div class="eval-card">
-            <div class="eval-value" id="ev-rec">–</div>
-            <div class="eval-label">Recall</div>
-          </div>
-          <div class="eval-card">
-            <div class="eval-value" id="ev-f1">–</div>
-            <div class="eval-label">F1 Score</div>
-          </div>
+          <div class="eval-card"><div class="eval-value" id="ev-acc">–</div><div class="eval-label">Accuracy</div></div>
+          <div class="eval-card"><div class="eval-value" id="ev-prec">–</div><div class="eval-label">Precision</div></div>
+          <div class="eval-card"><div class="eval-value" id="ev-rec">–</div><div class="eval-label">Recall</div></div>
+          <div class="eval-card"><div class="eval-value" id="ev-f1">–</div><div class="eval-label">F1 Score</div></div>
         </div>
       </div>
-
-      <div>
-        <div class="sidebar-title">Alert Feed</div>
-        <div id="alert-feed">
-          <div style="color:var(--muted);font-size:13px">No alerts yet</div>
-        </div>
-      </div>
+      <div><div class="sidebar-title">Alert Feed</div><div id="alert-feed"><div style="color:var(--muted);font-size:13px">No alerts yet</div></div></div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // ── Map init ──────────────────────────────────────────────────────────────
-    // Initialize Map centered on User's house
     const HOME = [17.3972319, 78.6100460];
     const map = L.map('map', { zoomControl: false }).setView(HOME, 15);
     L.control.zoom({ position: 'topleft' }).addTo(map);
@@ -458,23 +125,10 @@
       attribution: '©OpenStreetMap ©CartoDB', maxZoom: 19
     }).addTo(map);
 
-    // Safe zone circles (matching risk thresholds)
-    L.circle(HOME, {
-      radius: 100, color: '#22c55e', weight: 1.5,
-      fill: true, fillColor: '#22c55e', fillOpacity: 0.06, dashArray: '4 4'
-    }).addTo(map).bindTooltip('Safe Zone (100m)');
+    L.circle(HOME, { radius: 100, color: '#22c55e', weight: 1.5, fill: true, fillColor: '#22c55e', fillOpacity: 0.06, dashArray: '4 4' }).addTo(map);
+    L.circle(HOME, { radius: 300, color: '#f59e0b', weight: 1, fill: false, dashArray: '6 4' }).addTo(map);
+    L.circle(HOME, { radius: 700, color: '#ef4444', weight: 1, fill: false, dashArray: '8 4' }).addTo(map);
 
-    L.circle(HOME, {
-      radius: 300, color: '#f59e0b', weight: 1,
-      fill: false, dashArray: '6 4'
-    }).addTo(map).bindTooltip('Warning Zone (300m)');
-
-    L.circle(HOME, {
-      radius: 700, color: '#ef4444', weight: 1,
-      fill: false, dashArray: '8 4'
-    }).addTo(map).bindTooltip('Critical Zone (700m)');
-
-    // Home marker
     L.marker(HOME, {
       icon: L.divIcon({
         html: '<div style="background:#22c55e;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4)">🏠</div>',
@@ -482,305 +136,134 @@
       })
     }).addTo(map).bindTooltip('Home');
 
-    // ── State ─────────────────────────────────────────────────────────────────
-    let markers = {}; // person_id -> marker object
-    let paths = {};   // person_id -> polyline object
-    let allLiveData = [];
-    const RISK_COLORS = {
-      safe: '#22c55e', warning: '#f59e0b', high: '#f97316', critical: '#ef4444'
-    };
-    const PERSON_NAMES = {
-      P001: "User 1 (Primary)",
-      P002: "User 2 (Family)",
-      P003: "User 3"
-    };
+    let markers = {}; 
+    let paths = {};   
+    const RISK_COLORS = { safe: '#22c55e', warning: '#f59e0b', high: '#f97316', critical: '#ef4444' };
+    const PERSON_NAMES = { P001: "User 1 (Primary)", P002: "User 2 (Family)", P003: "User 3" };
 
-    // ── Fetch live data from API ──────────────────────────────────────────────
     async function fetchLiveData() {
       try {
         const res = await fetch('/api/live-data');
         const data = await res.json();
+        if (!data || data.length === 0) return;
 
-        if (!data || data.length === 0) {
-          document.getElementById('person-count').textContent = '0';
-          document.getElementById('high-count').textContent = '0';
-          document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
-
-          const container = document.getElementById('person-list');
-          container.innerHTML = `
-            <div style="text-align:center;padding:30px 16px;color:var(--muted)">
-              <div style="font-size:32px;margin-bottom:12px">📡</div>
-              <div style="font-size:13px;font-weight:600;margin-bottom:6px">Waiting for GPS data...</div>
-              <div style="font-size:11px;line-height:1.5">
-                Send GPS from your phone using:<br>
-                <code style="background:var(--card);padding:2px 6px;border-radius:4px;font-size:10px">
-                  POST /api/location<br>
-                  {"lat": 17.42, "lon": 78.35, "person_id": "P001"}
-                </code>
-              </div>
-            </div>`;
-          return;
-        }
-
-        allLiveData = data;
-        
-        // Group data by person_id
         const people = {};
-        data.forEach(point => {
-          const pid = point.person_id || 'P001';
+        data.forEach(p => { 
+          const pid = p.person_id || 'P001';
           if (!people[pid]) people[pid] = [];
-          people[pid].push(point);
+          people[pid].push(p);
         });
 
         const pIds = Object.keys(people);
         document.getElementById('person-count').textContent = pIds.length;
+        document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
         
-        let highRisks = 0;
         const container = document.getElementById('person-list');
-        container.innerHTML = ''; // Clear for re-render
+        container.innerHTML = '';
+        let highRisks = 0;
 
         pIds.forEach(pid => {
-          const stream = people[pid];
-          const latest = stream[stream.length - 1];
+          const s = people[pid];
+          const latest = s[s.length-1];
           if (latest.level === 'critical' || latest.level === 'high') highRisks++;
-          
-          const personObj = {
-            id: pid,
-            name: PERSON_NAMES[pid] || `User: ${pid}`,
-            risk: latest.level,
-            dist: latest.distance_km,
-            speed: latest.speed,
-            score: latest.risk / 100,
-            lat: latest.latitude,
-            lon: latest.longitude,
-            label: latest.distance_label,
-            heartRate: latest.heartRate,
-            timestamp: latest.timestamp,
+          const pObj = {
+            id: pid, name: PERSON_NAMES[pid] || `User ${pid}`, risk: latest.level,
+            dist: latest.distance_km, speed: latest.speed, score: latest.risk/100,
+            lat: latest.latitude, lon: latest.longitude, heartRate: latest.heartRate,
+            label: latest.distance_label, timestamp: latest.timestamp
           };
-
-          renderPersonCard(personObj, container);
-          updatePersonOnMap(pid, stream, personObj);
+          renderPersonCard(pObj, container);
+          updatePersonOnMap(pid, s, pObj);
         });
 
         document.getElementById('high-count').textContent = highRisks;
-        document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
-        
-        // Update first person summary if exists
         if (pIds.length > 0) {
-           const firstPid = pIds[0];
-           const firstStream = people[firstPid];
-           renderScoreBreakdown({
-             dist: firstStream[firstStream.length-1].distance_km,
-             speed: firstStream[firstStream.length-1].speed,
-             score: firstStream[firstStream.length-1].risk / 100
-           });
+           const first = people[pIds[0]];
+           const last = first[first.length-1];
+           renderScoreBreakdown({ dist: last.distance_km, speed: last.speed, score: last.risk/100 });
         }
-        
-        // Update alert feed for all people
         updateAlertFeed(pIds.map(pid => {
-           const s = people[pid];
-           const latest = s[s.length-1];
-           return {
-             id: pid,
-             name: PERSON_NAMES[pid] || pid,
-             risk: latest.level,
-             dist: latest.distance_km,
-             label: latest.distance_label
-           };
+          const s = people[pid];
+          const L = s[s.length-1];
+          return { id: pid, name: PERSON_NAMES[pid] || pid, risk: L.level, dist: L.distance_km, label: L.distance_label };
         }));
-
-      } catch (err) {
-        console.error('Failed to fetch live data:', err);
-      }
+      } catch (err) { console.error(err); }
     }
 
-    // ── Render person card ─────────────────────────────────────────────
     function renderPersonCard(p, container) {
-      const color = RISK_COLORS[p.risk] || '#22c55e';
-      const riskLabel = p.risk.toUpperCase();
-      const scoreW = Math.round(p.score * 100);
-
+      const color = RISK_COLORS[p.risk];
       const card = document.createElement('div');
       card.className = "person-card";
       card.innerHTML = `
-          <div class="person-header">
-            <div class="person-name">📱 ${p.name}</div>
-            <div class="risk-badge risk-${riskLabel}" style="background:${color}22;color:${color}">${riskLabel}</div>
-          </div>
-          <div class="person-metrics">
-            <div class="metric">
-              <div class="metric-label">Distance</div>
-              <div class="metric-value" style="color:${color}">${p.dist.toFixed(3)}<small style="font-size:11px;font-weight:400"> km</small></div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Speed</div>
-              <div class="metric-value">${p.speed.toFixed(1)}<small style="font-size:11px;font-weight:400"> km/h</small></div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Heart Rate</div>
-              <div class="metric-value">${p.heartRate}<small style="font-size:11px;font-weight:400"> bpm</small></div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Status</div>
-              <div class="metric-value" style="font-size:11px;color:${color}">${p.label}</div>
-            </div>
-          </div>
-          <div class="risk-bar-bg">
-            <div class="risk-bar-fill" style="width:${scoreW}%;background:${color}"></div>
-          </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between">
-            <span>ID: ${p.id} · Risk: ${scoreW}%</span>
-            <span>${p.timestamp}</span>
-          </div>`;
+        <div class="person-header"><div class="person-name">📱 ${p.name}</div><div class="risk-badge" style="background:${color}22;color:${color}">${p.risk.toUpperCase()}</div></div>
+        <div class="person-metrics">
+          <div class="metric"><div class="metric-label">Distance</div><div class="metric-value" style="color:${color}">${p.dist.toFixed(3)} km</div></div>
+          <div class="metric"><div class="metric-label">Speed</div><div class="metric-value">${p.speed.toFixed(1)} km/h</div></div>
+          <div class="metric"><div class="metric-label">Heart Rate</div><div class="metric-value">${p.heartRate} bpm</div></div>
+          <div class="metric"><div class="metric-label">Status</div><div class="metric-value" style="font-size:11px;color:${color}">${p.label}</div></div>
+        </div>
+        <div class="risk-bar-bg"><div class="risk-bar-fill" style="width:${p.score*100}%;background:${color}"></div></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between"><span>ID: ${p.id}</span><span>${p.timestamp}</span></div>`;
       container.appendChild(card);
     }
 
-    // ── Update map with per-person markers/trails ────────────────────────────
-    function updatePersonOnMap(pid, stream, person) {
-      const color = RISK_COLORS[person.risk] || '#22c55e';
-      const points = stream.map(d => [d.latitude, d.longitude]);
-
-      // Update Path
-      if (paths[pid]) {
-        paths[pid].setLatLngs(points);
-        paths[pid].setStyle({ color: color });
-      } else {
-        paths[pid] = L.polyline(points, {
-          color: color, weight: 3, opacity: 0.6, dashArray: '5, 5'
-        }).addTo(map);
-      }
-
-      // Update Marker
-      const pulse = (person.risk === 'critical' || person.risk === 'high')
-        ? 'animation:blink 1.5s infinite' : '';
-
+    function updatePersonOnMap(pid, stream, p) {
+      const color = RISK_COLORS[p.risk];
+      const pts = stream.map(d => [d.latitude, d.longitude]);
+      if (paths[pid]) { paths[pid].setLatLngs(pts); paths[pid].setStyle({ color }); }
+      else { paths[pid] = L.polyline(pts, { color, weight: 3, opacity: 0.6, dashArray: '5,5' }).addTo(map); }
+      
+      const pulse = (p.risk === 'critical' || p.risk === 'high') ? 'animation:blink 1.5s infinite' : '';
       const icon = L.divIcon({
-        html: `<div style="background:${color};color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;box-shadow:0 2px 12px ${color}88;${pulse}">${pid}</div>`,
+        html: `<div style="background:${color};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;box-shadow:0 2px 12px ${color}88;${pulse}">${pid}</div>`,
         iconSize: [36, 36], iconAnchor: [18, 18]
       });
-
-      if (markers[pid]) {
-        markers[pid].setLatLng([person.lat, person.lon]);
-        markers[pid].setIcon(icon);
-      } else {
-        markers[pid] = L.marker([person.lat, person.lon], { icon: icon }).addTo(map)
-          .bindTooltip(`${person.name}`, { permanent: false });
-      }
-
-      // Pan map if it's the primary user P001
-      if (pid === 'P001') {
-        map.panTo([person.lat, person.lon], { animate: true, duration: 0.5 });
-      }
-    }:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;box-shadow:0 2px 12px ${color}88;${pulse}">${pid}</div>`,
-        iconSize: [36, 36], iconAnchor: [18, 18]
-      });
-
-      if (markers[pid]) {
-        markers[pid].setLatLng([person.lat, person.lon]);
-        markers[pid].setIcon(icon);
-        markers[pid].setTooltipContent(`<b>${person.name}</b><br>Risk: ${person.risk.toUpperCase()}`);
-      } else {
-        markers[pid] = L.marker([person.lat, person.lon], { icon: icon }).addTo(map)
-          .bindTooltip(`${person.name}`, { permanent: false });
-      }
+      if (markers[pid]) { markers[pid].setLatLng([p.lat, p.lon]); markers[pid].setIcon(icon); }
+      else { markers[pid] = L.marker([p.lat, p.lon], { icon }).addTo(map).bindTooltip(p.name); }
+      if (pid === 'P001') map.panTo([p.lat, p.lon], { animate: true });
     }
 
-    // ── Score breakdown ────────────────────────────────────────────────────────
     function renderScoreBreakdown(p) {
-      const scores = {
-        distance: Math.min(p.dist / 0.7, 1),
-        speed: Math.min(p.speed / 10, 1),
-        status: p.score,
-      };
-      const labels = {
-        distance: 'Distance from home',
-        speed: 'Movement speed',
-        status: 'Overall risk',
-      };
-
+      const scores = { distance: Math.min(p.dist/0.7, 1), speed: Math.min(p.speed/10, 1), status: p.score };
+      const labels = { distance: 'Distance from home', speed: 'Movement speed', status: 'Overall risk' };
       let html = '';
       for (const [key, val] of Object.entries(scores)) {
         const pct = Math.round(val * 100);
         const color = pct > 65 ? '#ef4444' : pct > 35 ? '#f59e0b' : '#22c55e';
-        html += `
-      <div class="score-row">
-        <div class="score-label">${labels[key]}</div>
-        <div class="score-bar-wrap">
-          <div class="score-bar-bg">
-            <div class="score-bar" style="width:${pct}%;background:${color}"></div>
-          </div>
-        </div>
-        <div class="score-pct" style="color:${color}">${pct}%</div>
-      </div>`;
+        html += `<div class="score-row"><div class="score-label">${labels[key]}</div><div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar" style="width:${pct}%;background:${color}"></div></div></div><div class="score-pct" style="color:${color}">${pct}%</div></div>`;
       }
-
-      // Add distance display
-      html += `
-        <div style="margin-top:12px;padding:10px;background:var(--card);border-radius:8px;font-size:12px">
-          <div style="color:var(--muted);margin-bottom:4px">Distance from home</div>
-          <div style="font-size:18px;font-weight:700">${p.dist.toFixed(3)} km</div>
-          <div style="font-size:11px;color:var(--muted)">${(p.dist * 1000).toFixed(0)} meters</div>
-        </div>`;
-
       document.getElementById('score-breakdown').innerHTML = html;
     }
 
-    // ── Alert feed ─────────────────────────────────────────────────────────────
     function updateAlertFeed(people) {
       const feed = document.getElementById('alert-feed');
       const unsafe = people.filter(p => p.risk !== 'safe');
-
       if (unsafe.length === 0) {
-        feed.innerHTML = `
-          <div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">
-            🟢 All persons are in safe zone — no alerts
-          </div>`;
+        feed.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">🟢 All persons are in safe zone — no alerts</div>`;
         return;
       }
-
       const time = new Date().toLocaleTimeString();
-        <div class="alert-item ${alertClass}" style="margin-bottom:8px">
-          <div style="font-weight:600;font-size:12px">${person.risk.toUpperCase()} RISK</div>
-          <div style="margin-top:3px;color:var(--muted)">${msg}</div>
-          <div class="alert-time">${time} · Alert active</div>
-        </div>`;
-
-      feed.innerHTML = newAlert + existing;
-      // Keep only last 10 alerts
-      const items = feed.querySelectorAll('.alert-item');
-      if (items.length > 10) {
-        for (let i = 10; i < items.length; i++) items[i].remove();
-      }
+      feed.innerHTML = unsafe.map(p => {
+        const cls = p.risk === 'critical' ? 'HIGH' : 'MEDIUM';
+        return `<div class="alert-item ${cls}" style="margin-bottom:8px"><div style="font-weight:600;font-size:11px">${p.id}: ${p.risk.toUpperCase()}</div><div style="margin-top:2px;color:var(--muted);font-size:11px">${p.name} is ${p.dist.toFixed(3)}km from home</div><div class="alert-time">${time}</div></div>`;
+      }).join('');
     }
 
-    // ── Model evaluation ───────────────────────────────────────────────────────
     function updateEvaluation() {
-      const metrics = { accuracy: 0.891, precision: 0.847, recall: 0.823, f1: 0.835 };
-      document.getElementById('ev-acc').textContent = (metrics.accuracy * 100).toFixed(1) + '%';
-      document.getElementById('ev-prec').textContent = (metrics.precision * 100).toFixed(1) + '%';
-      document.getElementById('ev-rec').textContent = (metrics.recall * 100).toFixed(1) + '%';
-      document.getElementById('ev-f1').textContent = (metrics.f1 * 100).toFixed(1) + '%';
+      const m = { accuracy: 0.891, precision: 0.847, recall: 0.823, f1: 0.835 };
+      document.getElementById('ev-acc').textContent = (m.accuracy * 100).toFixed(1) + '%';
+      document.getElementById('ev-prec').textContent = (m.precision * 100).toFixed(1) + '%';
+      document.getElementById('ev-rec').textContent = (m.recall * 100).toFixed(1) + '%';
+      document.getElementById('ev-f1').textContent = (m.f1 * 100).toFixed(1) + '%';
     }
 
-    // ── Map mode ───────────────────────────────────────────────────────────────
     function setMapMode(mode) {
       document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
       event.target.classList.add('active');
     }
 
-    // ── Main ───────────────────────────────────────────────────────────────────
-    function init() {
-      updateEvaluation();
-      fetchLiveData();
-
-      // Auto-refresh every 3 seconds
-      setInterval(() => {
-        fetchLiveData();
-      }, 3000);
-    }
-
+    function init() { updateEvaluation(); fetchLiveData(); setInterval(fetchLiveData, 3000); }
     init();
   </script>
 </body>
-
 </html>
