@@ -139,7 +139,7 @@ def get_stats():
     high = sum(1 for p in computed if p["level"] == "critical")
     warn = sum(1 for p in computed if p["level"] == "warning")
     safe = sum(1 for p in computed if p["level"] == "safe")
-    avg_risk = round(float(sum(p["risk"] for p in computed) / total), 1) if total else 0.0
+    avg_risk = float(round(sum(p["risk"] for p in computed) / total, 1)) if total else 0.0
     drift_count = sum(1 for p in computed if p["outside"])
 
     return jsonify({
@@ -161,7 +161,7 @@ def get_persons(): # type: ignore
 
 @app.route("/api/persons", methods=["POST"])
 def add_person():
-    global next_person_id # pyre-ignore[8]: Not mutable from this scope
+    global next_person_id
     body = request.json
     person = {
         "id": next_person_id,
@@ -281,6 +281,45 @@ def get_live_data():
         })
 
     return jsonify(results)
+
+
+@app.route("/api/history/<person_id>")
+def get_person_history(person_id):
+    """Returns the full historical path for a specific person."""
+    if not supabase:
+        return jsonify({"path": []})
+    try:
+        response = (
+            supabase.table("locations")
+            .select("latitude, longitude, created_at")
+            .eq("person_id", person_id)
+            .order("created_at", desc=False)
+            .execute()
+        )
+        return jsonify({"path": response.data})
+    except Exception as e:
+        print(f"History fetch error: {e}")
+        return jsonify({"path": []})
+
+
+@app.route("/api/heatmap-data/<person_id>")
+def get_heatmap_data(person_id):
+    """Returns points formatted for Leaflet.heat intensity layer."""
+    if not supabase:
+        return jsonify({"heatmap_points": []})
+    try:
+        response = (
+            supabase.table("locations")
+            .select("latitude, longitude")
+            .eq("person_id", person_id)
+            .execute()
+        )
+        # Intensity = 1 for each point
+        points = [[p["latitude"], p["longitude"], 1.0] for p in response.data]
+        return jsonify({"heatmap_points": points})
+    except Exception as e:
+        print(f"Heatmap fetch error: {e}")
+        return jsonify({"heatmap_points": []})
 
 
 @app.route("/api/live-reset", methods=["POST"])

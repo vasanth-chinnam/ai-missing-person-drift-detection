@@ -116,6 +116,8 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <script>
     const HOME = [17.3972319, 78.6100460];
     const map = L.map('map', { zoomControl: false }).setView(HOME, 15);
@@ -138,30 +140,35 @@
 
     let markers = {}; 
     let paths = {};   
+    let heatLayer = null;
+    let currentMode = 'live';
     const RISK_COLORS = { safe: '#22c55e', warning: '#f59e0b', high: '#f97316', critical: '#ef4444' };
     const PERSON_NAMES = { P001: "User 1 (Primary)", P002: "User 2 (Family)", P003: "User 3" };
 
     async function fetchLiveData() {
+      if (currentMode !== 'live') return;
       try {
         const res = await fetch('/api/live-data');
         const data = await res.json();
         if (!data || data.length === 0) return;
-
+        // ... (existing grouping logic) ...
         const people = {};
         data.forEach(p => { 
           const pid = p.person_id || 'P001';
           if (!people[pid]) people[pid] = [];
           people[pid].push(p);
         });
-
         const pIds = Object.keys(people);
+        updateUI(pIds, people);
+      } catch (err) { console.error(err); }
+    }
+
+    function updateUI(pIds, people) {
         document.getElementById('person-count').textContent = pIds.length;
         document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
-        
         const container = document.getElementById('person-list');
         container.innerHTML = '';
         let highRisks = 0;
-
         pIds.forEach(pid => {
           const s = people[pid];
           const latest = s[s.length-1];
@@ -175,19 +182,7 @@
           renderPersonCard(pObj, container);
           updatePersonOnMap(pid, s, pObj);
         });
-
         document.getElementById('high-count').textContent = highRisks;
-        if (pIds.length > 0) {
-           const first = people[pIds[0]];
-           const last = first[first.length-1];
-           renderScoreBreakdown({ dist: last.distance_km, speed: last.speed, score: last.risk/100 });
-        }
-        updateAlertFeed(pIds.map(pid => {
-          const s = people[pid];
-          const L = s[s.length-1];
-          return { id: pid, name: PERSON_NAMES[pid] || pid, risk: L.level, dist: L.distance_km, label: L.distance_label };
-        }));
-      } catch (err) { console.error(err); }
     }
 
     function renderPersonCard(p, container) {
@@ -209,44 +204,31 @@
 
     function updatePersonOnMap(pid, stream, p) {
       const color = RISK_COLORS[p.risk];
-      const pts = stream.map(d => [d.latitude, d.longitude]);
-      if (paths[pid]) { paths[pid].setLatLngs(pts); paths[pid].setStyle({ color }); }
-      else { paths[pid] = L.polyline(pts, { color, weight: 3, opacity: 0.6, dashArray: '5,5' }).addTo(map); }
-      
-      const pulse = (p.risk === 'critical' || p.risk === 'high') ? 'animation:blink 1.5s infinite' : '';
-      const icon = L.divIcon({
-        html: `<div style="background:${color};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;box-shadow:0 2px 12px ${color}88;${pulse}">${pid}</div>`,
-        iconSize: [36, 36], iconAnchor: [18, 18]
-      });
-      if (markers[pid]) { markers[pid].setLatLng([p.lat, p.lon]); markers[pid].setIcon(icon); }
-      else { markers[pid] = L.marker([p.lat, p.lon], { icon }).addTo(map).bindTooltip(p.name); }
-      if (pid === 'P001') map.panTo([p.lat, p.lon], { animate: true });
-    }
-
-    function renderScoreBreakdown(p) {
-      const scores = { distance: Math.min(p.dist/0.7, 1), speed: Math.min(p.speed/10, 1), status: p.score };
-      const labels = { distance: 'Distance from home', speed: 'Movement speed', status: 'Overall risk' };
-      let html = '';
-      for (const [key, val] of Object.entries(scores)) {
-        const pct = Math.round(val * 100);
-        const color = pct > 65 ? '#ef4444' : pct > 35 ? '#f59e0b' : '#22c55e';
-        html += `<div class="score-row"><div class="score-label">${labels[key]}</div><div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar" style="width:${pct}%;background:${color}"></div></div></div><div class="score-pct" style="color:${color}">${pct}%</div></div>`;
+      if (markers[pid]) { markers[pid].setLatLng([p.lat, p.lon]); }
+      else {
+        const icon = L.divIcon({
+          html: `<div style="background:${color};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.3)">${pid}</div>`,
+          iconSize: [32, 32], iconAnchor: [16, 16]
+        });
+        markers[pid] = L.marker([p.lat, p.lon], { icon }).addTo(map).bindTooltip(p.name);
       }
-      document.getElementById('score-breakdown').innerHTML = html;
+      if (pid === 'P001' && currentMode === 'live') map.panTo([p.lat, p.lon]);
     }
 
     function updateAlertFeed(people) {
       const feed = document.getElementById('alert-feed');
       const unsafe = people.filter(p => p.risk !== 'safe');
       if (unsafe.length === 0) {
-        feed.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">🟢 All persons are in safe zone — no alerts</div>`;
+        feed.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">🟢 Safe zone — no alerts</div>`;
         return;
       }
       const time = new Date().toLocaleTimeString();
-      feed.innerHTML = unsafe.map(p => {
-        const cls = p.risk === 'critical' ? 'HIGH' : 'MEDIUM';
-        return `<div class="alert-item ${cls}" style="margin-bottom:8px"><div style="font-weight:600;font-size:11px">${p.id}: ${p.risk.toUpperCase()}</div><div style="margin-top:2px;color:var(--muted);font-size:11px">${p.name} is ${p.dist.toFixed(3)}km from home</div><div class="alert-time">${time}</div></div>`;
-      }).join('');
+      feed.innerHTML = unsafe.map(p => `
+        <div class="alert-item ${p.risk === 'critical' ? 'HIGH' : 'MEDIUM'}" style="margin-bottom:8px">
+          <div style="font-weight:600;font-size:11px">${p.id}: ${p.risk.toUpperCase()}</div>
+          <div style="margin-top:2px;color:var(--muted);font-size:11px">${p.name} is ${p.dist.toFixed(3)}km from home</div>
+          <div class="alert-time">${time}</div>
+        </div>`).join('');
     }
 
     function updateEvaluation() {
@@ -257,9 +239,36 @@
       document.getElementById('ev-f1').textContent = (m.f1 * 100).toFixed(1) + '%';
     }
 
-    function setMapMode(mode) {
+    async function setMapMode(mode) {
+      currentMode = mode;
       document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
+      const btn = Array.from(document.querySelectorAll('.map-btn')).find(b => b.textContent.toLowerCase() === mode);
+      if (btn) btn.classList.add('active');
+
+      // Clear layers
+      if (heatLayer) map.removeLayer(heatLayer);
+      Object.values(paths).forEach(p => map.removeLayer(p));
+      paths = {};
+
+      if (mode === 'live') {
+        fetchLiveData();
+      } else if (mode === 'history') {
+        const pId = 'P001'; // Default to primary for history demo
+        const res = await fetch(`/api/history/${pId}`);
+        const data = await res.json();
+        if (data.path) {
+          const pts = data.path.map(p => [p.latitude, p.longitude]);
+          paths['history'] = L.polyline(pts, { color: '#6366f1', weight: 4, opacity: 0.8 }).addTo(map);
+          map.fitBounds(paths['history'].getBounds());
+        }
+      } else if (mode === 'heatmap') {
+        const pId = 'P001';
+        const res = await fetch(`/api/heatmap-data/${pId}`);
+        const data = await res.json();
+        if (data.heatmap_points) {
+          heatLayer = L.heatLayer(data.heatmap_points, { radius: 25, blur: 15, max: 1.0 }).addTo(map);
+        }
+      }
     }
 
     function init() { updateEvaluation(); fetchLiveData(); setInterval(fetchLiveData, 3000); }
