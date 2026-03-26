@@ -565,23 +565,7 @@
         document.getElementById('high-count').textContent = highRisks;
         document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
         
-        // Update first person summary if exists
-        if (pIds.length > 0) {
-           const firstPid = pIds[0];
-           const firstStream = people[firstPid];
-           renderScoreBreakdown({
-             dist: firstStream[firstStream.length-1].distance_km,
-             speed: firstStream[firstStream.length-1].speed,
-             score: firstStream[firstStream.length-1].risk / 100
-           });
-        }
-
-      } catch (err) {
-        console.error('Failed to fetch live data:', err);
-      }
-    }
-
-    // ── Render person card ─────────────────────────────────────────────
+        // Update first person summary if exists    // ── Render person card ─────────────────────────────────────────────
     function renderPersonCard(p, container) {
       const color = RISK_COLORS[p.risk] || '#22c55e';
       const riskLabel = p.risk.toUpperCase();
@@ -600,6 +584,14 @@
               <div class="metric-value" style="color:${color}">${p.dist.toFixed(3)}<small style="font-size:11px;font-weight:400"> km</small></div>
             </div>
             <div class="metric">
+              <div class="metric-label">Speed</div>
+              <div class="metric-value">${p.speed.toFixed(1)}<small style="font-size:11px;font-weight:400"> km/h</small></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Heart Rate</div>
+              <div class="metric-value">${p.heartRate}<small style="font-size:11px;font-weight:400"> bpm</small></div>
+            </div>
+            <div class="metric">
               <div class="metric-label">Status</div>
               <div class="metric-value" style="font-size:11px;color:${color}">${p.label}</div>
             </div>
@@ -607,8 +599,9 @@
           <div class="risk-bar-bg">
             <div class="risk-bar-fill" style="width:${scoreW}%;background:${color}"></div>
           </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px">
-            ID: ${p.id} · Risk: ${scoreW}%
+          <div style="font-size:10px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between">
+            <span>ID: ${p.id} · Risk: ${scoreW}%</span>
+            <span>${p.timestamp}</span>
           </div>`;
       container.appendChild(card);
     }
@@ -634,6 +627,22 @@
 
       const icon = L.divIcon({
         html: `<div style="background:${color};color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;box-shadow:0 2px 12px ${color}88;${pulse}">${pid}</div>`,
+        iconSize: [36, 36], iconAnchor: [18, 18]
+      });
+
+      if (markers[pid]) {
+        markers[pid].setLatLng([person.lat, person.lon]);
+        markers[pid].setIcon(icon);
+      } else {
+        markers[pid] = L.marker([person.lat, person.lon], { icon: icon }).addTo(map)
+          .bindTooltip(`${person.name}`, { permanent: false });
+      }
+
+      // Pan map if it's the primary user P001
+      if (pid === 'P001') {
+        map.panTo([person.lat, person.lon], { animate: true, duration: 0.5 });
+      }
+    }:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;box-shadow:0 2px 12px ${color}88;${pulse}">${pid}</div>`,
         iconSize: [36, 36], iconAnchor: [18, 18]
       });
 
