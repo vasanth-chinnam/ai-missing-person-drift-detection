@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import uuid
 from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -19,6 +20,7 @@ import joblib # pyre-ignore[21]
 from src.geofence import check_geofence, SAFE_LOCATION, SAFE_RADIUS # pyre-ignore[21]
 from src.risk_engine import calculate_risk, calculate_risk_from_distance # pyre-ignore[21]
 from src.trajectory_predictor import detect_route_deviation # pyre-ignore[21]
+from src.notification import send_sms_alert # pyre-ignore[21]
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 CORS(app)
@@ -54,6 +56,11 @@ geofence_config = {
     "lon": SAFE_LOCATION[1],
     "radius": SAFE_RADIUS,
 }
+
+# Auth token store (in-memory for simplicity)
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "missing2026")
+active_tokens: set = set()
 
 alert_history = []
 
@@ -110,6 +117,25 @@ for point in computed:
 def serve_frontend():
     folder = app.static_folder or "../frontend"
     return send_from_directory(folder, "index.html")
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    body = request.json or {}
+    username = body.get("username", "")
+    password = body.get("password", "")
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        token = str(uuid.uuid4())
+        active_tokens.add(token)
+        return jsonify({"token": token})
+    return jsonify({"error": "Invalid credentials"}), 401
+
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    active_tokens.discard(token)
+    return jsonify({"status": "logged out"})
 
 
 @app.route("/api/gps-data")
@@ -184,10 +210,13 @@ def get_geofence():
 
 @app.route("/api/geofence", methods=["POST"])
 def update_geofence():
+    import src.risk_engine as re_module # pyre-ignore[21]
     body = request.json
     geofence_config["lat"] = body.get("lat", geofence_config["lat"])
     geofence_config["lon"] = body.get("lon", geofence_config["lon"])
     geofence_config["radius"] = body.get("radius", geofence_config["radius"])
+    # Sync the live risk engine so new GPS calculations use the updated home
+    re_module.HOME_LOCATION = (geofence_config["lat"], geofence_config["lon"])
     return jsonify(geofence_config)
 
 
@@ -212,10 +241,14 @@ def receive_location():
     # Compute real km-based risk
     risk_result = calculate_risk_from_distance(lat, lon)
 
+    person_id = data.get("person_id", "P001")
+
+    # 🚨 Fire SMS alert if wandering detected
+    if risk_result["risk_level"] == "critical":
+        send_sms_alert(person_id, risk_result["distance_km"], risk_result["distance_label"])
+
     if supabase:
         try:
-            # Use the person_id from the incoming data, or default to P001
-            person_id = data.get("person_id", "P001")
             supabase.table("locations").insert({
                 "latitude": lat,
                 "longitude": lon,
