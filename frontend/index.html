@@ -251,6 +251,22 @@
       document.getElementById('ev-f1').textContent = (m.f1 * 100).toFixed(1) + '%';
     }
 
+    function renderScoreBreakdown(p) {
+      const scores = { distance: Math.min(p.dist/0.7, 1), speed: Math.min(p.speed/10, 1), status: p.score };
+      const labels = { distance: 'Distance from home', speed: 'Movement speed', status: 'Overall risk' };
+      let html = '';
+      for (const [key, val] of Object.entries(scores)) {
+        const pct = Math.round(val * 100);
+        const color = pct > 65 ? '#ef4444' : pct > 35 ? '#f59e0b' : '#22c55e';
+        html += `<div class="score-row">
+          <div class="score-label">${labels[key]}</div>
+          <div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar" style="width:${pct}%;background:${color}"></div></div></div>
+          <div class="score-pct" style="color:${color}">${pct}%</div>
+        </div>`;
+      }
+      document.getElementById('score-breakdown').innerHTML = html;
+    }
+
     async function setMapMode(mode) {
       currentMode = mode;
       document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
