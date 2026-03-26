@@ -12,9 +12,9 @@ TWILIO_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM = os.environ.get("TWILIO_FROM_NUMBER")
 ALERT_TO = os.environ.get("ALERT_PHONE_NUMBER")
 
-# Cooldown: don't send more than 1 SMS per 5 minutes
+# Cooldown: don't send more than 1 SMS per 10 seconds (for testing)
 _last_alert_time: float = 0
-COOLDOWN_SECONDS = 300  # 5 minutes
+COOLDOWN_SECONDS = 10 
 
 
 def send_sms_alert(person_id: str, distance_km: float, risk_label: str) -> bool:
@@ -23,9 +23,10 @@ def send_sms_alert(person_id: str, distance_km: float, risk_label: str) -> bool:
     Returns True if sent, False if skipped (cooldown) or credentials missing.
     """
     global _last_alert_time
-
+    
+    # Debug vars check
     if not all([TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM, ALERT_TO]):
-        print("WARNING: Twilio credentials not configured — SMS not sent.")
+        print(f"DEBUG SMS: Missing credentials! SID={bool(TWILIO_SID)}, TOKEN={bool(TWILIO_TOKEN)}, FROM={bool(TWILIO_FROM)}, TO={bool(ALERT_TO)}")
         return False
 
     now = time.time()
