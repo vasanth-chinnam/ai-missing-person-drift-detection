@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import uuid
+import hashlib
 from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -57,10 +58,20 @@ geofence_config = {
     "radius": SAFE_RADIUS,
 }
 
-# Auth token store (in-memory for simplicity)
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+# ── Multi-User Auth Store ────────────────────────────────────────────
+def _hash(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# Admin account always works (from env vars)
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "missing2026")
-active_tokens: set = set()
+
+# In-memory users: { username: hashed_password }
+# Admin seeded on init; new users can register via /api/signup
+users_db: dict = {
+    os.environ.get("ADMIN_USERNAME", "admin"): _hash(ADMIN_PASSWORD),
+    "vasanth": _hash(ADMIN_PASSWORD),  # Convenient alias
+}
+active_tokens: dict = {}  # token -> username
 
 alert_history = []
 
@@ -122,18 +133,37 @@ def serve_frontend():
 @app.route("/api/login", methods=["POST"])
 def login():
     body = request.json or {}
+    username = body.get("username", "").strip().lower()
     password = body.get("password", "")
-    if password == ADMIN_PASSWORD:
+    stored = users_db.get(username)
+    if stored and stored == _hash(password):
         token = str(uuid.uuid4())
-        active_tokens.add(token)
-        return jsonify({"token": token})
-    return jsonify({"error": "Invalid credentials"}), 401
+        active_tokens[token] = username
+        return jsonify({"token": token, "username": username})
+    return jsonify({"error": "Invalid username or password"}), 401
+
+
+@app.route("/api/signup", methods=["POST"])
+def signup():
+    body = request.json or {}
+    username = body.get("username", "").strip().lower()
+    password = body.get("password", "")
+    if not username or not password:
+        return jsonify({"error": "Username and password are required"}), 400
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
+    if username in users_db:
+        return jsonify({"error": "Username already exists"}), 409
+    users_db[username] = _hash(password)
+    token = str(uuid.uuid4())
+    active_tokens[token] = username
+    return jsonify({"token": token, "username": username}), 201
 
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    active_tokens.discard(token)
+    active_tokens.pop(token, None)
     return jsonify({"status": "logged out"})
 
 

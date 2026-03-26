@@ -128,13 +128,33 @@
   <!-- ── Login Overlay ─────────────────────────────── -->
   <div id="login-overlay">
     <div class="login-box">
-      <div style="font-size:40px;margin-bottom:12px">🔐</div>
+      <div style="font-size:40px;margin-bottom:12px">📍</div>
       <h2>AI Drift Detection</h2>
       <p>Sign in to access the live tracking dashboard</p>
-      <input type="text" id="username" placeholder="Username" autocomplete="username" />
-      <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
-      <button class="login-btn" onclick="doLogin()">Sign In</button>
-      <div id="login-error">❌ Invalid username or password</div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:0;margin:20px 0 18px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <button id="tab-login" onclick="switchTab('login')" style="flex:1;padding:8px;background:var(--accent);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer">Sign In</button>
+        <button id="tab-signup" onclick="switchTab('signup')" style="flex:1;padding:8px;background:transparent;color:var(--muted);border:none;font-size:13px;font-weight:600;cursor:pointer">Sign Up</button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="form-login">
+        <input type="text" id="username" placeholder="Username" autocomplete="username" />
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+        <button class="login-btn" onclick="doLogin()">Sign In</button>
+      </div>
+
+      <!-- Sign Up Form -->
+      <div id="form-signup" style="display:none">
+        <input type="text" id="su-username" placeholder="Choose a username" />
+        <input type="password" id="su-password" placeholder="Choose a password (min 6 chars)" />
+        <input type="password" id="su-confirm" placeholder="Confirm password" />
+        <button class="login-btn" onclick="doSignup()">Create Account</button>
+      </div>
+
+      <div id="login-error" style="color:var(--high);font-size:12px;margin-top:10px;display:none"></div>
+      <div id="login-success" style="color:var(--low);font-size:12px;margin-top:10px;display:none"></div>
     </div>
   </div>
 
@@ -214,9 +234,43 @@
     // ── Auth ────────────────────────────────────────────────────────────
     let authToken = sessionStorage.getItem('authToken') || '';
 
+    function switchTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('form-login').style.display = isLogin ? '' : 'none';
+      document.getElementById('form-signup').style.display = isLogin ? 'none' : '';
+      document.getElementById('tab-login').style.background = isLogin ? 'var(--accent)' : 'transparent';
+      document.getElementById('tab-login').style.color = isLogin ? '#fff' : 'var(--muted)';
+      document.getElementById('tab-signup').style.background = isLogin ? 'transparent' : 'var(--accent)';
+      document.getElementById('tab-signup').style.color = isLogin ? 'var(--muted)' : '#fff';
+      document.getElementById('login-error').style.display = 'none';
+      document.getElementById('login-success').style.display = 'none';
+    }
+
+    function showAuthError(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = '❌ ' + msg;
+      el.style.display = 'block';
+      document.getElementById('login-success').style.display = 'none';
+    }
+
+    function showAuthSuccess(msg) {
+      const el = document.getElementById('login-success');
+      el.textContent = '✅ ' + msg;
+      el.style.display = 'block';
+      document.getElementById('login-error').style.display = 'none';
+    }
+
+    function handleAuthSuccess(data) {
+      authToken = data.token;
+      sessionStorage.setItem('authToken', authToken);
+      document.getElementById('login-overlay').style.display = 'none';
+      init();
+    }
+
     async function doLogin() {
-      const username = document.getElementById('username').value;
+      const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
+      if (!username || !password) { showAuthError('Please enter username and password'); return; }
       try {
         const res = await fetch('/api/login', {
           method: 'POST',
@@ -224,17 +278,30 @@
           body: JSON.stringify({ username, password })
         });
         const data = await res.json();
+        if (res.ok && data.token) { handleAuthSuccess(data); }
+        else { showAuthError(data.error || 'Login failed'); }
+      } catch(e) { showAuthError('Network error — try again'); }
+    }
+
+    async function doSignup() {
+      const username = document.getElementById('su-username').value.trim();
+      const password = document.getElementById('su-password').value;
+      const confirm = document.getElementById('su-confirm').value;
+      if (!username || !password) { showAuthError('Please fill all fields'); return; }
+      if (password !== confirm) { showAuthError('Passwords do not match'); return; }
+      if (password.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
         if (res.ok && data.token) {
-          authToken = data.token;
-          sessionStorage.setItem('authToken', authToken);
-          document.getElementById('login-overlay').style.display = 'none';
-          init();
-        } else {
-          document.getElementById('login-error').style.display = 'block';
-        }
-      } catch(e) {
-        document.getElementById('login-error').style.display = 'block';
-      }
+          showAuthSuccess(`Account created for @${username}! Logging you in…`);
+          setTimeout(() => handleAuthSuccess(data), 1000);
+        } else { showAuthError(data.error || 'Signup failed'); }
+      } catch(e) { showAuthError('Network error — try again'); }
     }
 
     async function doLogout() {
@@ -254,7 +321,7 @@
       document.getElementById('login-overlay').style.display = 'none';
     }
 
-    // Allow Enter key in login
+    // Enter key shortcuts
     document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
     document.getElementById('username').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
