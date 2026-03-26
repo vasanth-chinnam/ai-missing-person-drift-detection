@@ -565,7 +565,36 @@
         document.getElementById('high-count').textContent = highRisks;
         document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
         
-        // Update first person summary if exists    // ── Render person card ─────────────────────────────────────────────
+        // Update first person summary if exists
+        if (pIds.length > 0) {
+           const firstPid = pIds[0];
+           const firstStream = people[firstPid];
+           renderScoreBreakdown({
+             dist: firstStream[firstStream.length-1].distance_km,
+             speed: firstStream[firstStream.length-1].speed,
+             score: firstStream[firstStream.length-1].risk / 100
+           });
+        }
+        
+        // Update alert feed for all people
+        updateAlertFeed(pIds.map(pid => {
+           const s = people[pid];
+           const latest = s[s.length-1];
+           return {
+             id: pid,
+             name: PERSON_NAMES[pid] || pid,
+             risk: latest.level,
+             dist: latest.distance_km,
+             label: latest.distance_label
+           };
+        }));
+
+      } catch (err) {
+        console.error('Failed to fetch live data:', err);
+      }
+    }
+
+    // ── Render person card ─────────────────────────────────────────────
     function renderPersonCard(p, container) {
       const color = RISK_COLORS[p.risk] || '#22c55e';
       const riskLabel = p.risk.toUpperCase();
@@ -697,23 +726,19 @@
     }
 
     // ── Alert feed ─────────────────────────────────────────────────────────────
-    function updateAlertFeed(person) {
+    function updateAlertFeed(people) {
       const feed = document.getElementById('alert-feed');
-      if (person.risk === 'safe') {
+      const unsafe = people.filter(p => p.risk !== 'safe');
+
+      if (unsafe.length === 0) {
         feed.innerHTML = `
           <div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">
-            🟢 Person is in safe zone — no alerts
+            🟢 All persons are in safe zone — no alerts
           </div>`;
         return;
       }
 
       const time = new Date().toLocaleTimeString();
-      const alertClass = (person.risk === 'critical') ? 'HIGH' : 'MEDIUM';
-      const msg = `Person is ${person.dist.toFixed(3)} km from home — ${person.label}`;
-
-      // Prepend new alert (keep last 10)
-      const existing = feed.innerHTML;
-      const newAlert = `
         <div class="alert-item ${alertClass}" style="margin-bottom:8px">
           <div style="font-weight:600;font-size:12px">${person.risk.toUpperCase()} RISK</div>
           <div style="margin-top:3px;color:var(--muted)">${msg}</div>
