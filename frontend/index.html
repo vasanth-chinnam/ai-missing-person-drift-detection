@@ -483,12 +483,16 @@
     }).addTo(map).bindTooltip('Home');
 
     // ── State ─────────────────────────────────────────────────────────────────
-    let liveMarker = null;
-    let livePath = null;
-    let pathPoints = [];
+    let markers = {}; // person_id -> marker object
+    let paths = {};   // person_id -> polyline object
     let allLiveData = [];
     const RISK_COLORS = {
       safe: '#22c55e', warning: '#f59e0b', high: '#f97316', critical: '#ef4444'
+    };
+    const PERSON_NAMES = {
+      P001: "User 1 (Primary)",
+      P002: "User 2 (Family)",
+      P003: "User 3"
     };
 
     // ── Fetch live data from API ──────────────────────────────────────────────
@@ -511,7 +515,7 @@
                 Send GPS from your phone using:<br>
                 <code style="background:var(--card);padding:2px 6px;border-radius:4px;font-size:10px">
                   POST /api/location<br>
-                  {"lat": 17.42, "lon": 78.35}
+                  {"lat": 17.42, "lon": 78.35, "person_id": "P001"}
                 </code>
               </div>
             </div>`;
@@ -519,49 +523,73 @@
         }
 
         allLiveData = data;
-        const latest = data[data.length - 1];
+        
+        // Group data by person_id
+        const people = {};
+        data.forEach(point => {
+          const pid = point.person_id || 'P001';
+          if (!people[pid]) people[pid] = [];
+          people[pid].push(point);
+        });
 
-        // Build person summary from latest reading
-        const person = {
-          id: 'LIVE',
-          name: 'Tracked Person',
-          risk: latest.level,
-          dist: latest.distance_km,
-          speed: latest.speed,
-          score: latest.risk / 100,
-          lat: latest.latitude,
-          lon: latest.longitude,
-          label: latest.distance_label,
-          heartRate: latest.heartRate,
-          timestamp: latest.timestamp,
-        };
+        const pIds = Object.keys(people);
+        document.getElementById('person-count').textContent = pIds.length;
+        
+        let highRisks = 0;
+        const container = document.getElementById('person-list');
+        container.innerHTML = ''; // Clear for re-render
 
-        // Update header stats
-        document.getElementById('person-count').textContent = '1';
-        const riskLevel = latest.level;
-        document.getElementById('high-count').textContent =
-          (riskLevel === 'critical' || riskLevel === 'high') ? '1' : '0';
+        pIds.forEach(pid => {
+          const stream = people[pid];
+          const latest = stream[stream.length - 1];
+          if (latest.level === 'critical' || latest.level === 'high') highRisks++;
+          
+          const personObj = {
+            id: pid,
+            name: PERSON_NAMES[pid] || `User: ${pid}`,
+            risk: latest.level,
+            dist: latest.distance_km,
+            speed: latest.speed,
+            score: latest.risk / 100,
+            lat: latest.latitude,
+            lon: latest.longitude,
+            label: latest.distance_label,
+            heartRate: latest.heartRate,
+            timestamp: latest.timestamp,
+          };
+
+          renderPersonCard(personObj, container);
+          updatePersonOnMap(pid, stream, personObj);
+        });
+
+        document.getElementById('high-count').textContent = highRisks;
         document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
-
-        renderLiveCard(person);
-        updateLiveMap(data, person);
-        updateAlertFeed(person);
-        renderScoreBreakdown(person);
+        
+        // Update first person summary if exists
+        if (pIds.length > 0) {
+           const firstPid = pIds[0];
+           const firstStream = people[firstPid];
+           renderScoreBreakdown({
+             dist: firstStream[firstStream.length-1].distance_km,
+             speed: firstStream[firstStream.length-1].speed,
+             score: firstStream[firstStream.length-1].risk / 100
+           });
+        }
 
       } catch (err) {
         console.error('Failed to fetch live data:', err);
       }
     }
 
-    // ── Render live person card ─────────────────────────────────────────────
-    function renderLiveCard(p) {
-      const container = document.getElementById('person-list');
+    // ── Render person card ─────────────────────────────────────────────
+    function renderPersonCard(p, container) {
       const color = RISK_COLORS[p.risk] || '#22c55e';
       const riskLabel = p.risk.toUpperCase();
       const scoreW = Math.round(p.score * 100);
 
-      container.innerHTML = `
-        <div class="person-card selected">
+      const card = document.createElement('div');
+      card.className = "person-card";
+      card.innerHTML = `
           <div class="person-header">
             <div class="person-name">📱 ${p.name}</div>
             <div class="risk-badge risk-${riskLabel}" style="background:${color}22;color:${color}">${riskLabel}</div>
@@ -572,58 +600,51 @@
               <div class="metric-value" style="color:${color}">${p.dist.toFixed(3)}<small style="font-size:11px;font-weight:400"> km</small></div>
             </div>
             <div class="metric">
-              <div class="metric-label">Speed</div>
-              <div class="metric-value">${p.speed.toFixed(1)}<small style="font-size:11px;font-weight:400"> km/h</small></div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Heart Rate</div>
-              <div class="metric-value">${p.heartRate}<small style="font-size:11px;font-weight:400"> bpm</small></div>
-            </div>
-            <div class="metric">
               <div class="metric-label">Status</div>
-              <div class="metric-value" style="font-size:12px;color:${color}">${p.label}</div>
+              <div class="metric-value" style="font-size:11px;color:${color}">${p.label}</div>
             </div>
           </div>
           <div class="risk-bar-bg">
             <div class="risk-bar-fill" style="width:${scoreW}%;background:${color}"></div>
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:4px">
-            Risk: ${scoreW}% · ${allLiveData.length} GPS points received
-          </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px">
-            Last update: ${p.timestamp}
-          </div>
-        </div>`;
+            ID: ${p.id} · Risk: ${scoreW}%
+          </div>`;
+      container.appendChild(card);
     }
 
-    // ── Update map with live GPS trail ──────────────────────────────────────
-    function updateLiveMap(data, person) {
-      // Draw path trail
-      if (livePath) map.removeLayer(livePath);
-      pathPoints = data.map(d => [d.latitude, d.longitude]);
+    // ── Update map with per-person markers/trails ────────────────────────────
+    function updatePersonOnMap(pid, stream, person) {
+      const color = RISK_COLORS[person.risk] || '#22c55e';
+      const points = stream.map(d => [d.latitude, d.longitude]);
 
-      if (pathPoints.length > 1) {
-        livePath = L.polyline(pathPoints, {
-          color: '#6366f1', weight: 3, opacity: 0.8
+      // Update Path
+      if (paths[pid]) {
+        paths[pid].setLatLngs(points);
+        paths[pid].setStyle({ color: color });
+      } else {
+        paths[pid] = L.polyline(points, {
+          color: color, weight: 3, opacity: 0.6, dashArray: '5, 5'
         }).addTo(map);
       }
 
-      // Update current position marker
-      if (liveMarker) map.removeLayer(liveMarker);
-      const color = RISK_COLORS[person.risk] || '#22c55e';
+      // Update Marker
       const pulse = (person.risk === 'critical' || person.risk === 'high')
         ? 'animation:blink 1.5s infinite' : '';
 
-      liveMarker = L.marker([person.lat, person.lon], {
-        icon: L.divIcon({
-          html: `<div style="background:${color};color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 16px ${color}88;${pulse}">📍</div>`,
-          iconSize: [40, 40], iconAnchor: [20, 20]
-        })
-      }).addTo(map)
-        .bindPopup(`<b>${person.name}</b><br>Risk: <b style="color:${color}">${person.risk.toUpperCase()}</b><br>Dist: ${person.dist.toFixed(3)} km<br>${person.label}`, { maxWidth: 200 });
+      const icon = L.divIcon({
+        html: `<div style="background:${color};color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;box-shadow:0 2px 12px ${color}88;${pulse}">${pid}</div>`,
+        iconSize: [36, 36], iconAnchor: [18, 18]
+      });
 
-      // Pan to latest position
-      map.setView([person.lat, person.lon], map.getZoom(), { animate: true, duration: 0.5 });
+      if (markers[pid]) {
+        markers[pid].setLatLng([person.lat, person.lon]);
+        markers[pid].setIcon(icon);
+        markers[pid].setTooltipContent(`<b>${person.name}</b><br>Risk: ${person.risk.toUpperCase()}`);
+      } else {
+        markers[pid] = L.marker([person.lat, person.lon], { icon: icon }).addTo(map)
+          .bindTooltip(`${person.name}`, { permanent: false });
+      }
     }
 
     // ── Score breakdown ────────────────────────────────────────────────────────

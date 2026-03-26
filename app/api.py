@@ -214,12 +214,12 @@ def receive_location():
 
     if supabase:
         try:
-            # We insert strictly what is in the table (lat, lon, person_id)
-            # The database auto-generates id and created_at
+            # Use the person_id from the incoming data, or default to P001
+            person_id = data.get("person_id", "P001")
             supabase.table("locations").insert({
                 "latitude": lat,
                 "longitude": lon,
-                "person_id": "P001"
+                "person_id": person_id
             }).execute()
         except Exception as e:
             print(f"Supabase error: {e}")
@@ -245,8 +245,8 @@ def get_live_data():
         return jsonify([])
 
     try:
-        # Fetch the last 100 locations from Supabase, ordered NEW->OLD (to get the latest ones)
-        response = supabase.table("locations").select("*").order("created_at", desc=True).limit(100).execute()
+        # Fetch more locations (up to 300) to ensure we get a good trail for multiple users
+        response = supabase.table("locations").select("*").order("created_at", desc=True).limit(300).execute()
         data = response.data
         if data:
             # Reverse the list so it's OLD->NEW (for the map path trail in frontend)
@@ -268,6 +268,7 @@ def get_live_data():
         # This keeps the dashboard UI fully packed with data
         results.append({
             "index": idx,
+            "person_id": row.get("person_id", "P001"),
             "timestamp": row.get("created_at", ""),
             "latitude": lat,
             "longitude": lon,
