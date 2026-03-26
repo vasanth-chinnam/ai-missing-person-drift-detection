@@ -122,9 +122,8 @@ def serve_frontend():
 @app.route("/api/login", methods=["POST"])
 def login():
     body = request.json or {}
-    username = body.get("username", "")
     password = body.get("password", "")
-    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+    if password == ADMIN_PASSWORD:
         token = str(uuid.uuid4())
         active_tokens.add(token)
         return jsonify({"token": token})
