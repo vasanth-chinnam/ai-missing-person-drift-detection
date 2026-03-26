@@ -1,8 +1,8 @@
 from geopy.distance import geodesic
 
 # Safe location (example home location)
-SAFE_LOCATION = (12.9716, 77.5946)
-
+SAFE_LOCATION = (17.3972319, 78.6100460)
+ 
 SAFE_RADIUS = 500  # meters
 
 
