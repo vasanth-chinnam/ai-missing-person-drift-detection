@@ -245,9 +245,12 @@ def get_live_data():
         return jsonify([])
 
     try:
-        # Fetch the last 100 locations from Supabase, ordered old->new for path trail
-        response = supabase.table("locations").select("*").order("created_at", desc=False).limit(100).execute()
+        # Fetch the last 100 locations from Supabase, ordered NEW->OLD (to get the latest ones)
+        response = supabase.table("locations").select("*").order("created_at", desc=True).limit(100).execute()
         data = response.data
+        if data:
+            # Reverse the list so it's OLD->NEW (for the map path trail in frontend)
+            data.reverse()
     except Exception as e:
         print(f"Supabase error reading: {e}")
         return jsonify([])
