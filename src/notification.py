@@ -4,6 +4,7 @@ Sends real-time SMS when wandering / critical risk is detected.
 """
 import os
 import time
+import sys
 from datetime import datetime
 
 # Twilio credentials from environment
@@ -12,9 +13,14 @@ TWILIO_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM = os.environ.get("TWILIO_FROM_NUMBER")
 ALERT_TO = os.environ.get("ALERT_PHONE_NUMBER")
 
-# Cooldown: don't send more than 1 SMS per 10 seconds (for testing)
+# Cooldown: don't send more than 1 SMS per 1 second (for testing)
 _last_alert_time: float = 0
-COOLDOWN_SECONDS = 10 
+COOLDOWN_SECONDS = 1 
+
+
+def _log(msg: str):
+    sys.stderr.write(f"SMS_DEBUG: {msg}\n")
+    sys.stderr.flush()
 
 
 def send_sms_alert(person_id: str, distance_km: float, risk_label: str) -> bool:
@@ -26,13 +32,13 @@ def send_sms_alert(person_id: str, distance_km: float, risk_label: str) -> bool:
     
     # Debug vars check
     if not all([TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM, ALERT_TO]):
-        print(f"DEBUG SMS: Missing credentials! SID={bool(TWILIO_SID)}, TOKEN={bool(TWILIO_TOKEN)}, FROM={bool(TWILIO_FROM)}, TO={bool(ALERT_TO)}")
+        _log(f"Missing credentials! SID={bool(TWILIO_SID)}, TOKEN={bool(TWILIO_TOKEN)}, FROM={bool(TWILIO_FROM)}, TO={bool(ALERT_TO)}")
         return False
 
     now = time.time()
     if now - _last_alert_time < COOLDOWN_SECONDS:
         remaining = int(COOLDOWN_SECONDS - (now - _last_alert_time))
-        print(f"SMS cooldown: {remaining}s remaining — skipping alert.")
+        _log(f"Cooldown: {remaining}s remaining — skipping alert.")
         return False
 
     try:
@@ -47,10 +53,11 @@ def send_sms_alert(person_id: str, distance_km: float, risk_label: str) -> bool:
             f"Time: {timestamp}\n"
             f"Dashboard: https://ai-missing-person-drift-detection.onrender.com"
         )
+        _log(f"Attempting to send to {ALERT_TO}...")
         client.messages.create(body=message, from_=TWILIO_FROM, to=ALERT_TO)
         _last_alert_time = now
-        print(f"✅ SMS alert sent to {ALERT_TO} for {person_id}")
+        _log(f"✅ SMS alert sent to {ALERT_TO} for {person_id}")
         return True
     except Exception as e:
-        print(f"❌ SMS send failed: {e}")
+        _log(f"❌ SMS send failed: {e}")
         return False
