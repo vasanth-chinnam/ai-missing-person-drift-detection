@@ -216,8 +216,18 @@
 
     function updatePersonOnMap(pid, stream, p) {
       const color = RISK_COLORS[p.risk];
-      if (markers[pid]) { markers[pid].setLatLng([p.lat, p.lon]); }
-      else {
+      const pts = stream.map(d => [d.latitude, d.longitude]);
+      
+      if (paths[pid]) { 
+        paths[pid].setLatLngs(pts); 
+        paths[pid].setStyle({ color }); 
+      } else { 
+        paths[pid] = L.polyline(pts, { color, weight: 3, opacity: 0.6, dashArray: '5,5' }).addTo(map); 
+      }
+      
+      if (markers[pid]) { 
+        markers[pid].setLatLng([p.lat, p.lon]); 
+      } else {
         const icon = L.divIcon({
           html: `<div style="background:${color};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.3)">${pid}</div>`,
           iconSize: [32, 32], iconAnchor: [16, 16]
