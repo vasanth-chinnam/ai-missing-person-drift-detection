@@ -169,6 +169,8 @@
         const container = document.getElementById('person-list');
         container.innerHTML = '';
         let highRisks = 0;
+        const alertList = [];
+
         pIds.forEach(pid => {
           const s = people[pid];
           const latest = s[s.length-1];
@@ -181,8 +183,18 @@
           };
           renderPersonCard(pObj, container);
           updatePersonOnMap(pid, s, pObj);
+          alertList.push(pObj);
         });
+
         document.getElementById('high-count').textContent = highRisks;
+
+        // Auto-show metrics for User 1
+        if (pIds.length > 0) {
+           const p001 = people['P001'] || people[pIds[0]];
+           const L = p001[p001.length-1];
+           renderScoreBreakdown({ dist: L.distance_km, speed: L.speed, score: L.risk/100 });
+        }
+        updateAlertFeed(alertList);
     }
 
     function renderPersonCard(p, container) {
