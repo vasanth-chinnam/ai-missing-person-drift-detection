@@ -274,7 +274,7 @@ def receive_location():
 
     # 🚨 Fire SMS alert if wandering detected
     if risk_result["risk_level"] == "critical":
-        send_sms_alert(person_id, risk_result["distance_km"], risk_result["distance_label"])
+        send_sms_alert(person_id, risk_result["distance_km"], risk_result["distance_label"], supabase_client=supabase)
 
     if supabase:
         try:

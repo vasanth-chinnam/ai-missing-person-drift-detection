@@ -23,23 +23,38 @@ def _log(msg: str):
     sys.stderr.flush()
 
 
-def send_sms_alert(person_id: str, distance_km: float, risk_label: str) -> bool:
+def send_sms_alert(person_id: str, distance_km: float, risk_label: str, supabase_client=None) -> bool:
     """
     Sends an SMS alert via Twilio when wandering is detected.
-    Returns True if sent, False if skipped (cooldown) or credentials missing.
+    Uses Supabase (if provided) to persist the cooldown across server restarts.
     """
-    global _last_alert_time
-    
-    # Debug vars check
     if not all([TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM, ALERT_TO]):
         _log(f"Missing credentials! SID={bool(TWILIO_SID)}, TOKEN={bool(TWILIO_TOKEN)}, FROM={bool(TWILIO_FROM)}, TO={bool(ALERT_TO)}")
         return False
+    
+    now_ts = int(time.time())
+    last_sent = 0
 
-    now = time.time()
-    if now - _last_alert_time < COOLDOWN_SECONDS:
-        remaining = int(COOLDOWN_SECONDS - (now - _last_alert_time))
-        _log(f"Cooldown: {remaining}s remaining — skipping alert.")
+    # Try to get last sent time from Supabase to survive server restarts
+    if supabase_client:
+        try:
+            res = supabase_client.table("system_metadata").select("value").eq("key", "last_sms_time").execute()
+            if res.data:
+                last_sent = int(res.data[0]["value"])
+        except Exception:
+            _log("Could not fetch cooldown from Supabase, using default 0")
+
+    if now_ts - last_sent < COOLDOWN_SECONDS:
+        remaining = COOLDOWN_SECONDS - (now_ts - last_sent)
+        _log(f"Cooldown active: {remaining}s remaining — skipping alert.")
         return False
+
+    # IMPORTANT: Update last_sent BEFORE the attempt to prevent rapid fire if Twilio fails
+    if supabase_client:
+        try:
+            supabase_client.table("system_metadata").upsert({"key": "last_sms_time", "value": str(now_ts)}).execute()
+        except Exception as e:
+            _log(f"Warning: Could not update Supabase cooldown: {e}")
 
     try:
         from twilio.rest import Client  # pyre-ignore[21]
@@ -55,8 +70,7 @@ def send_sms_alert(person_id: str, distance_km: float, risk_label: str) -> bool:
         )
         _log(f"Attempting to send to {ALERT_TO}...")
         client.messages.create(body=message, from_=TWILIO_FROM, to=ALERT_TO)
-        _last_alert_time = now
-        _log(f"✅ SMS alert sent to {ALERT_TO} for {person_id}")
+        _log(f"✅ SMS successfully handed to Twilio for {person_id}")
         return True
     except Exception as e:
         _log(f"❌ SMS send failed: {e}")
