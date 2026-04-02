@@ -21,7 +21,7 @@ import joblib # pyre-ignore[21]
 from src.geofence import check_geofence, SAFE_LOCATION, SAFE_RADIUS # pyre-ignore[21]
 from src.risk_engine import calculate_risk, calculate_risk_from_distance # pyre-ignore[21]
 from src.trajectory_predictor import detect_route_deviation # pyre-ignore[21]
-from src.notification import send_sms_alert # pyre-ignore[21]
+from src.notification import send_voice_alert # pyre-ignore[21]
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 CORS(app)
@@ -272,9 +272,9 @@ def receive_location():
 
     person_id = data.get("person_id", "P001")
 
-    # 🚨 Fire SMS alert if wandering detected
+    # 🚨 Fire voice alert if wandering detected
     if risk_result["risk_level"] == "critical":
-        send_sms_alert(person_id, risk_result["distance_km"], risk_result["distance_label"], supabase_client=supabase)
+        send_voice_alert(person_id, risk_result["distance_km"], risk_result["distance_label"], supabase_client=supabase)
 
     if supabase:
         try:

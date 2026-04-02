@@ -1,11 +1,11 @@
 """
-test_sms_alert.py
+test_voice_alert.py
 -----------------
 Run this script to simulate a person wandering 2 km from home.
-This will trigger the Twilio SMS alert to your phone.
+This will trigger the Twilio Voice Call alert to your phone.
 
 Usage:
-    .\venv\Scripts\python.exe test_sms_alert.py
+    .\venv\Scripts\python.exe test_voice_alert.py
 """
 import requests
 
@@ -35,7 +35,7 @@ try:
     print(f"  Risk Level : {data.get('risk_level', data.get('level', '?'))}")
     print(f"  Distance   : {data.get('distance_km', '?')} km from home")
     print(f"  Risk Score : {data.get('risk_score', data.get('risk', '?'))}")
-    print(f"\n✅ Done! Check your phone for an SMS from +1 478-429-7791")
-    print("   (SMS is sent only if cooldown period of 5 mins has passed)")
+    print(f"\n✅ Done! Check your phone for a Voice Call from +1 478-429-7791")
+    print("   (Call is initiated only if cooldown period of 5 mins has passed)")
 except Exception as e:
     print(f"❌ Error: {e}")

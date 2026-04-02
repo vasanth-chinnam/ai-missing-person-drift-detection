@@ -23,9 +23,9 @@ def _log(msg: str):
     sys.stderr.flush()
 
 
-def send_sms_alert(person_id: str, distance_km: float, risk_label: str, supabase_client=None) -> bool:
+def send_voice_alert(person_id: str, distance_km: float, risk_label: str, supabase_client=None) -> bool:
     """
-    Sends an SMS alert via Twilio when wandering is detected.
+    Initiates a Twilio voice call alert when wandering is detected.
     Uses Supabase (if provided) to persist the cooldown across server restarts.
     """
     if not all([TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM, ALERT_TO]):
@@ -38,7 +38,7 @@ def send_sms_alert(person_id: str, distance_km: float, risk_label: str, supabase
     # Try to get last sent time from Supabase to survive server restarts
     if supabase_client:
         try:
-            res = supabase_client.table("system_metadata").select("value").eq("key", "last_sms_time").execute()
+            res = supabase_client.table("system_metadata").select("value").eq("key", "last_alert_time").execute()
             if res.data:
                 last_sent = int(res.data[0]["value"])
         except Exception:
@@ -49,29 +49,28 @@ def send_sms_alert(person_id: str, distance_km: float, risk_label: str, supabase
         _log(f"Cooldown active: {remaining}s remaining — skipping alert.")
         return False
 
-    # IMPORTANT: Update last_sent BEFORE the attempt to prevent rapid fire if Twilio fails
+    # IMPORTANT: Update last_sent BEFORE the attempt
     if supabase_client:
         try:
-            supabase_client.table("system_metadata").upsert({"key": "last_sms_time", "value": str(now_ts)}).execute()
+            supabase_client.table("system_metadata").upsert({"key": "last_alert_time", "value": str(now_ts)}).execute()
         except Exception as e:
             _log(f"Warning: Could not update Supabase cooldown: {e}")
 
     try:
         from twilio.rest import Client  # pyre-ignore[21]
         client = Client(TWILIO_SID, TWILIO_TOKEN)
-        timestamp = datetime.now().strftime("%d %b %Y, %I:%M %p")
-        message = (
-            f"🚨 WANDERING ALERT!\n"
-            f"Person: {person_id}\n"
-            f"Distance: {distance_km:.2f} km from home\n"
-            f"Status: {risk_label}\n"
-            f"Time: {timestamp}\n"
-            f"Dashboard: https://ai-missing-person-drift-detection.onrender.com"
+        
+        twiml_instruction = (
+            f"<Response><Say voice='alice'>Emergency Alert. "
+            f"The person with ID {person_id} has wandered out of the safe zone. "
+            f"They are currently {distance_km:.2f} kilometers away. "
+            f"Please check the dashboard immediately.</Say></Response>"
         )
-        _log(f"Attempting to send to {ALERT_TO}...")
-        client.messages.create(body=message, from_=TWILIO_FROM, to=ALERT_TO)
-        _log(f"✅ SMS successfully handed to Twilio for {person_id}")
+
+        _log(f"Attempting voice call to {ALERT_TO}...")
+        call = client.calls.create(twiml=twiml_instruction, from_=TWILIO_FROM, to=ALERT_TO)
+        _log(f"✅ Voice call successfully initiated to {ALERT_TO} for {person_id} (Call SID: {call.sid})")
         return True
     except Exception as e:
-        _log(f"❌ SMS send failed: {e}")
+        _log(f"❌ Voice call failed: {e}")
         return False
