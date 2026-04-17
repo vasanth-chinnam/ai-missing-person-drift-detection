@@ -331,8 +331,12 @@
     document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
     document.getElementById('username').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
-    // ── Map Init ─────────────────────────────────────────────────────────
+    // ── Global Constants ──────────────────────────────────────────────────
+    const RISK_COLORS = { safe:'#22c55e', warning:'#f59e0b', high:'#f97316', critical:'#ef4444' };
+    const PERSON_NAMES = { P001:'User 1 (Primary)', P002:'User 2 (Family)', P003:'User 3' };
     let DEFAULT_HOME = [17.3972319, 78.6100460];
+
+    // ── Map Init ─────────────────────────────────────────────────────────
     const map = L.map('map', { zoomControl: false }).setView(DEFAULT_HOME, 15);
     L.control.zoom({ position: 'topleft' }).addTo(map);
 
@@ -521,9 +525,7 @@
 
     // ── Live tracking state ──────────────────────────────────────────────
     let markers = {}, paths = {}, heatLayer = null, currentMode = 'live';
-    let lastTrackedLat = HOME[0], lastTrackedLon = HOME[1];
-    const RISK_COLORS = { safe:'#22c55e', warning:'#f59e0b', high:'#f97316', critical:'#ef4444' };
-    const PERSON_NAMES = { P001:'User 1 (Primary)', P002:'User 2 (Family)', P003:'User 3' };
+    let lastTrackedLat = DEFAULT_HOME[0], lastTrackedLon = DEFAULT_HOME[1];
 
     async function fetchLiveData() {
       if (currentMode !== 'live') return;
