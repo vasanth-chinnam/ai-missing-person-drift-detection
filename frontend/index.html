@@ -94,6 +94,10 @@
     .set-home-btn:hover, .set-home-btn.active { background: rgba(99,102,241,.35); }
     .radius-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
     input[type=range] { width: 100%; accent-color: var(--accent); }
+    .home-person-label { font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 8px; padding: 6px 8px; background: rgba(99,102,241,.1); border-radius: 6px; text-align: center; }
+    .home-status { font-size: 11px; color: var(--muted); margin-bottom: 8px; text-align: center; }
+    .home-status.not-set { color: var(--medium); }
+    .person-card.selected { border-color: var(--accent); background: rgba(99,102,241,.08); }
 
     /* Eval grid */
     .eval-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -191,9 +195,11 @@
       <!-- Home Controls -->
       <div class="home-controls">
         <h4>🏠 Home Controls</h4>
-        <button class="set-home-btn" id="set-home-btn" onclick="toggleSetHome()">📍 Click Map to Move Home</button>
-        <div class="radius-label">Safe Zone Radius: <span id="radius-label-val">100m</span></div>
-        <input type="range" id="radius-slider" min="50" max="1000" step="50" value="100" oninput="updateRadius(this.value)" />
+        <div class="home-person-label" id="home-person-label">Select a person from sidebar</div>
+        <div class="home-status" id="home-status"></div>
+        <button class="set-home-btn" id="set-home-btn" onclick="toggleSetHome()" disabled>📍 Click Map to Set Home</button>
+        <div class="radius-label">Safe Zone Radius: <span id="radius-label-val">500m</span></div>
+        <input type="range" id="radius-slider" min="50" max="1000" step="50" value="500" oninput="updateRadius(this.value)" />
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span>50m</span><span>1km</span></div>
 
         <div style="margin-top:10px">
@@ -326,8 +332,8 @@
     document.getElementById('username').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
     // ── Map Init ─────────────────────────────────────────────────────────
-    let HOME = [17.3972319, 78.6100460];
-    const map = L.map('map', { zoomControl: false }).setView(HOME, 15);
+    let DEFAULT_HOME = [17.3972319, 78.6100460];
+    const map = L.map('map', { zoomControl: false }).setView(DEFAULT_HOME, 15);
     L.control.zoom({ position: 'topleft' }).addTo(map);
 
     // Tile layers
@@ -347,62 +353,170 @@
       document.getElementById('layer-' + name).classList.add('active');
     }
 
-    // ── Geofence Circles ─────────────────────────────────────────────────
-    let homeCircles = [];
-    let homeMarker = null;
-    let currentRadius = 100;
+    // ── Per-Person Homes ─────────────────────────────────────────────────
+    let personHomes = {};       // { pid: { lat, lon, radius_m } }
+    let selectedPersonId = null; // Currently selected person in sidebar
+    let currentRadius = 500;
 
-    function drawHomeCircles(home, radius) {
-      homeCircles.forEach(c => map.removeLayer(c));
-      if (homeMarker) map.removeLayer(homeMarker);
-      homeCircles = [
-        L.circle(home, { radius, color:'#22c55e', weight:1.5, fill:true, fillColor:'#22c55e', fillOpacity:0.06, dashArray:'4 4' }).addTo(map),
-        L.circle(home, { radius:radius*3, color:'#f59e0b', weight:1, fill:false, dashArray:'6 4' }).addTo(map),
-        L.circle(home, { radius:radius*7, color:'#ef4444', weight:1, fill:false, dashArray:'8 4' }).addTo(map),
-      ];
-      homeMarker = L.marker(home, {
-        icon: L.divIcon({ html:'<div style="background:#22c55e;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4)">🏠</div>', iconSize:[32,32], iconAnchor:[16,16] })
-      }).addTo(map).bindTooltip('Home');
+    // Map layers for home circles (per person)
+    let homeCirclesMap = {};     // { pid: [circle1, circle2, circle3] }
+    let homeMarkersMap = {};     // { pid: marker }
+
+    const HOME_COLORS = {
+      P001: '#22c55e', P002: '#3b82f6', P003: '#a855f7',
+      P004: '#ec4899', P005: '#f97316', default: '#6366f1'
+    };
+
+    function getHomeColor(pid) {
+      return HOME_COLORS[pid] || HOME_COLORS.default;
     }
-    drawHomeCircles(HOME, currentRadius);
+
+    async function loadPersonHomes() {
+      try {
+        const res = await apiFetch('/api/person-homes');
+        const data = await res.json();
+        if (data.homes) {
+          data.homes.forEach(h => {
+            personHomes[h.person_id] = { lat: h.lat, lon: h.lon, radius_m: h.radius_m };
+          });
+        }
+        if (data.default_home) {
+          DEFAULT_HOME = [data.default_home.lat, data.default_home.lon];
+        }
+        drawAllHomeCircles();
+      } catch(e) { console.error('Failed to load person homes:', e); }
+    }
+
+    function drawAllHomeCircles() {
+      // Clear all existing home circles
+      Object.values(homeCirclesMap).forEach(circles => circles.forEach(c => map.removeLayer(c)));
+      Object.values(homeMarkersMap).forEach(m => map.removeLayer(m));
+      homeCirclesMap = {};
+      homeMarkersMap = {};
+
+      // Draw a circle for each person that has a home set
+      for (const [pid, home] of Object.entries(personHomes)) {
+        drawPersonHomeCircle(pid, home);
+      }
+    }
+
+    function drawPersonHomeCircle(pid, home) {
+      const color = getHomeColor(pid);
+      const radius = home.radius_m || 500;
+      const center = [home.lat, home.lon];
+      const isSelected = pid === selectedPersonId;
+      const opacity = isSelected ? 1 : 0.4;
+
+      // Remove old circles for this person
+      if (homeCirclesMap[pid]) homeCirclesMap[pid].forEach(c => map.removeLayer(c));
+      if (homeMarkersMap[pid]) map.removeLayer(homeMarkersMap[pid]);
+
+      homeCirclesMap[pid] = [
+        L.circle(center, { radius, color, weight: isSelected ? 1.5 : 1, fill:true, fillColor:color, fillOpacity: isSelected ? 0.06 : 0.03, dashArray:'4 4' }).addTo(map),
+        L.circle(center, { radius:radius*3, color:'#f59e0b', weight:1, fill:false, dashArray:'6 4', opacity }).addTo(map),
+        L.circle(center, { radius:radius*7, color:'#ef4444', weight:1, fill:false, dashArray:'8 4', opacity }).addTo(map),
+      ];
+      homeMarkersMap[pid] = L.marker(center, {
+        icon: L.divIcon({ html:`<div style="background:${color};color:#fff;border-radius:50%;width:${isSelected?32:24}px;height:${isSelected?32:24}px;display:flex;align-items:center;justify-content:center;font-size:${isSelected?16:12}px;box-shadow:0 2px 8px rgba(0,0,0,.4);opacity:${opacity}">🏠</div>`, iconSize:[isSelected?32:24,isSelected?32:24], iconAnchor:[isSelected?16:12,isSelected?16:12] })
+      }).addTo(map).bindTooltip(`${PERSON_NAMES[pid] || pid}'s Home`);
+    }
+
+    function selectPerson(pid) {
+      selectedPersonId = pid;
+      // Update sidebar card highlighting
+      document.querySelectorAll('.person-card').forEach(c => c.classList.remove('selected'));
+      const card = document.querySelector(`.person-card[data-pid="${pid}"]`);
+      if (card) card.classList.add('selected');
+
+      // Update home controls panel
+      const nameLabel = document.getElementById('home-person-label');
+      const statusLabel = document.getElementById('home-status');
+      const setBtn = document.getElementById('set-home-btn');
+      const slider = document.getElementById('radius-slider');
+
+      nameLabel.textContent = `🏠 ${PERSON_NAMES[pid] || pid}`;
+      setBtn.disabled = false;
+
+      const home = personHomes[pid];
+      if (home) {
+        statusLabel.textContent = `Home set at ${home.lat.toFixed(4)}, ${home.lon.toFixed(4)}`;
+        statusLabel.className = 'home-status';
+        setBtn.textContent = '📍 Move Home for ' + (PERSON_NAMES[pid] || pid);
+        currentRadius = home.radius_m || 500;
+        slider.value = currentRadius;
+        document.getElementById('radius-label-val').textContent = currentRadius >= 1000 ? (currentRadius/1000).toFixed(1)+'km' : currentRadius+'m';
+      } else {
+        statusLabel.textContent = '⚠️ No home set — using default location';
+        statusLabel.className = 'home-status not-set';
+        setBtn.textContent = '📍 Set Home for ' + (PERSON_NAMES[pid] || pid);
+        currentRadius = 500;
+        slider.value = 500;
+        document.getElementById('radius-label-val').textContent = '500m';
+      }
+
+      // Redraw circles to highlight selected
+      drawAllHomeCircles();
+    }
 
     // ── Set Home on map click ────────────────────────────────────────────
     let settingHome = false;
 
     function toggleSetHome() {
+      if (!selectedPersonId) return;
       settingHome = !settingHome;
       const btn = document.getElementById('set-home-btn');
       if (settingHome) {
         btn.classList.add('active');
-        btn.textContent = '🎯 Click the map to place Home…';
+        btn.textContent = `🎯 Click the map to place ${PERSON_NAMES[selectedPersonId] || selectedPersonId}'s home…`;
         map.getContainer().style.cursor = 'crosshair';
       } else {
         btn.classList.remove('active');
-        btn.textContent = '📍 Click Map to Move Home';
+        btn.textContent = '📍 Move Home for ' + (PERSON_NAMES[selectedPersonId] || selectedPersonId);
         map.getContainer().style.cursor = '';
       }
     }
 
     map.on('click', async function(e) {
-      if (!settingHome) return;
-      HOME = [e.latlng.lat, e.latlng.lng];
-      drawHomeCircles(HOME, currentRadius);
+      if (!settingHome || !selectedPersonId) return;
+      const lat = e.latlng.lat;
+      const lon = e.latlng.lng;
+
+      // Update local state
+      personHomes[selectedPersonId] = { lat, lon, radius_m: currentRadius };
+      drawAllHomeCircles();
       toggleSetHome();
-      // Update backend
+
+      // Save to backend
+      await apiFetch('/api/person-home', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ person_id: selectedPersonId, lat, lon, radius_m: currentRadius })
+      });
+
+      // Also update the old geofence endpoint for backward compat
       await apiFetch('/api/geofence', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ lat: HOME[0], lon: HOME[1], radius: currentRadius })
+        body: JSON.stringify({ lat, lon, radius: currentRadius })
       });
+
+      // Refresh the UI
+      selectPerson(selectedPersonId);
     });
 
     async function updateRadius(val) {
       currentRadius = parseInt(val);
       document.getElementById('radius-label-val').textContent = currentRadius >= 1000 ? (currentRadius/1000).toFixed(1)+'km' : currentRadius+'m';
-      drawHomeCircles(HOME, currentRadius);
-      await apiFetch('/api/geofence', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ lat: HOME[0], lon: HOME[1], radius: currentRadius })
-      });
+
+      if (selectedPersonId && personHomes[selectedPersonId]) {
+        personHomes[selectedPersonId].radius_m = currentRadius;
+        drawAllHomeCircles();
+
+        // Save updated radius
+        const home = personHomes[selectedPersonId];
+        await apiFetch('/api/person-home', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ person_id: selectedPersonId, lat: home.lat, lon: home.lon, radius_m: currentRadius })
+        });
+      }
     }
 
     // ── Live tracking state ──────────────────────────────────────────────
@@ -456,10 +570,15 @@
 
     function renderPersonCard(p, container) {
       const color = RISK_COLORS[p.risk];
+      const homeColor = getHomeColor(p.id);
+      const hasHome = !!personHomes[p.id];
+      const homeTag = hasHome ? `<span style="font-size:9px;color:${homeColor};margin-left:6px">🏠</span>` : `<span style="font-size:9px;color:var(--medium);margin-left:6px">⚠️ No home</span>`;
       const card = document.createElement('div');
-      card.className = 'person-card';
+      card.className = 'person-card' + (p.id === selectedPersonId ? ' selected' : '');
+      card.setAttribute('data-pid', p.id);
+      card.onclick = () => selectPerson(p.id);
       card.innerHTML = `
-        <div class="person-header"><div class="person-name">📱 ${p.name}</div><div style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${color}22;color:${color}">${p.risk.toUpperCase()}</div></div>
+        <div class="person-header"><div class="person-name">📱 ${p.name}${homeTag}</div><div style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${color}22;color:${color}">${p.risk.toUpperCase()}</div></div>
         <div class="person-metrics">
           <div class="metric"><div class="metric-label">Distance</div><div class="metric-value" style="color:${color}">${p.dist.toFixed(3)} km</div></div>
           <div class="metric"><div class="metric-label">Speed</div><div class="metric-value">${p.speed.toFixed(1)} km/h</div></div>
@@ -578,8 +697,9 @@
     }
 
     // ── Boot ─────────────────────────────────────────────────────────────
-    function init() {
+    async function init() {
       updateEvaluation();
+      await loadPersonHomes();
       fetchLiveData();
       setInterval(fetchLiveData, 3000);
     }

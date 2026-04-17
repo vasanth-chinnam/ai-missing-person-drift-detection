@@ -43,6 +43,48 @@ else:
 df = pd.read_csv(DATA_PATH)
 model = joblib.load(MODEL_PATH)
 
+# ── Per-Person Home Locations ────────────────────────────────────────────
+# Default fallback home (your original home address)
+DEFAULT_HOME = (17.3972319, 78.6100460)
+DEFAULT_RADIUS = 500  # meters
+
+# In-memory cache: { person_id: { "lat": float, "lon": float, "radius_m": int } }
+person_homes_cache: dict = {}
+
+def _load_person_homes():
+    """Load all person home locations from Supabase into memory."""
+    global person_homes_cache
+    if not supabase:
+        return
+    try:
+        response = supabase.table("person_homes").select("*").execute()
+        for row in response.data:
+            person_homes_cache[row["person_id"]] = {
+                "lat": row["home_lat"],
+                "lon": row["home_lon"],
+                "radius_m": row.get("radius_m", DEFAULT_RADIUS),
+            }
+        print(f"Loaded {len(person_homes_cache)} person home(s) from DB")
+    except Exception as e:
+        print(f"Could not load person_homes: {e}")
+
+def _get_home_for_person(person_id: str) -> tuple:
+    """Return (lat, lon) for a person's home, falling back to default."""
+    home = person_homes_cache.get(person_id)
+    if home:
+        return (home["lat"], home["lon"])
+    return DEFAULT_HOME
+
+def _get_radius_for_person(person_id: str) -> int:
+    """Return safe zone radius in meters for a person."""
+    home = person_homes_cache.get(person_id)
+    if home:
+        return home.get("radius_m", DEFAULT_RADIUS)
+    return DEFAULT_RADIUS
+
+# Load homes on startup
+_load_person_homes()
+
 # In-memory stores
 persons = [
     {"id": 1, "name": "Rajesh Kumar", "age": 72, "condition": "Alzheimer's", "status": "active",
@@ -267,10 +309,11 @@ def receive_location():
     heart_rate = int(data.get("heart_rate", 72))
     ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-    # Compute real km-based risk
-    risk_result = calculate_risk_from_distance(lat, lon)
-
     person_id = data.get("person_id", "P001")
+
+    # Compute real km-based risk using this person's home
+    person_home = _get_home_for_person(person_id)
+    risk_result = calculate_risk_from_distance(lat, lon, home=person_home)
 
     # 🚨 Fire voice alert if wandering detected
     if risk_result["risk_level"] == "critical":
@@ -324,7 +367,9 @@ def get_live_data():
     for idx, row in enumerate(data):
         lat = float(row["latitude"])
         lon = float(row["longitude"])
-        risk_result = calculate_risk_from_distance(lat, lon)
+        pid = row.get("person_id", "P001")
+        person_home = _get_home_for_person(pid)
+        risk_result = calculate_risk_from_distance(lat, lon, home=person_home)
         
         # We synthesize speed and heart_rate since we don't store them in DB
         # This keeps the dashboard UI fully packed with data
@@ -394,6 +439,74 @@ def reset_live_data():
         except Exception as e:
             print(f"Supabase error resetting: {e}")
     return jsonify({"status": "reset"})
+
+
+# ── Per-Person Home Endpoints ────────────────────────────────────────────
+
+@app.route("/api/person-home", methods=["POST"])
+def set_person_home():
+    """
+    Set or update the home location for a specific person.
+    Body: { "person_id": str, "lat": float, "lon": float, "radius_m": int (optional) }
+    """
+    data = request.json
+    if not data or "person_id" not in data or "lat" not in data or "lon" not in data:
+        return jsonify({"error": "person_id, lat, and lon are required"}), 400
+
+    pid = data["person_id"]
+    lat = float(data["lat"])
+    lon = float(data["lon"])
+    radius_m = int(data.get("radius_m", DEFAULT_RADIUS))
+
+    # Save to Supabase
+    if supabase:
+        try:
+            supabase.table("person_homes").upsert({
+                "person_id": pid,
+                "home_lat": lat,
+                "home_lon": lon,
+                "radius_m": radius_m,
+            }).execute()
+        except Exception as e:
+            print(f"Supabase error saving home: {e}")
+            return jsonify({"error": "Failed to save home location"}), 500
+
+    # Update in-memory cache
+    person_homes_cache[pid] = {"lat": lat, "lon": lon, "radius_m": radius_m}
+
+    return jsonify({
+        "status": "saved",
+        "person_id": pid,
+        "home": {"lat": lat, "lon": lon, "radius_m": radius_m},
+    })
+
+
+@app.route("/api/person-home/<person_id>", methods=["GET"])
+def get_person_home(person_id):
+    """Get the home location for a specific person."""
+    home = person_homes_cache.get(person_id)
+    if home:
+        return jsonify({"person_id": person_id, **home})
+    # Return default home if not set
+    return jsonify({
+        "person_id": person_id,
+        "lat": DEFAULT_HOME[0],
+        "lon": DEFAULT_HOME[1],
+        "radius_m": DEFAULT_RADIUS,
+        "is_default": True,
+    })
+
+
+@app.route("/api/person-homes", methods=["GET"])
+def get_all_person_homes():
+    """Get all stored person home locations."""
+    homes = []
+    for pid, home in person_homes_cache.items():
+        homes.append({"person_id": pid, **home})
+    return jsonify({
+        "homes": homes,
+        "default_home": {"lat": DEFAULT_HOME[0], "lon": DEFAULT_HOME[1], "radius_m": DEFAULT_RADIUS},
+    })
 
 
 if __name__ == "__main__":
